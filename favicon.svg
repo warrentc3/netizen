@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="248 97 182 120">
+  <defs>
+    <clipPath id="c">
+      <circle cx="294" cy="171" r="32"/>
+      <circle cx="342" cy="152" r="47"/>
+      <circle cx="392" cy="171" r="32"/>
+      <rect x="257" y="174" width="170" height="33" rx="16"/>
+    </clipPath>
+    <style>
+      .cl { fill: #7F77DD }
+      .rb { fill: #D85A30 }
+      @media (prefers-color-scheme: dark) {
+        .cl { fill: #AFA9EC }
+        .rb { fill: #F0997B }
+      }
+    </style>
+  </defs>
+  <g class="cl">
+    <circle cx="294" cy="171" r="32"/>
+    <circle cx="342" cy="152" r="47"/>
+    <circle cx="392" cy="171" r="32"/>
+    <rect x="257" y="174" width="170" height="33" rx="16"/>
+  </g>
+  <path class="rb" clip-path="url(#c)" d="M 297,65 L 430,277 L 414,287 L 281,75 Z"/>
+  <g class="rb" transform="translate(316,113) rotate(-46)">
+    <path d="M 0,0 C -13,-17 -35,-24 -30,-9 C -25,6 -8,9 0,0 Z"/>
+    <path d="M 0,0 C 13,-17 35,-24 30,-9 C 25,6 8,9 0,0 Z"/>
+    <ellipse rx="7" ry="5"/>
+  </g>
+</svg>
