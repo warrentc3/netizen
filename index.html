@@ -548,9 +548,7 @@
   </div>
 
   <script>
-    const REPO = 'warrentc3/netizen';
-    const RAW = `https://raw.githubusercontent.com/${REPO}/main`;
-    const API = `https://api.github.com/repos/${REPO}/contents`;
+    const RAW = 'https://raw.githubusercontent.com/warrentc3/netizen/main';
     const el = document.getElementById('catalog');
 
     // Theme toggle
@@ -572,25 +570,14 @@
       applyTheme(cur);
     });
 
-    // Parse version and format from filename convention:
-    // {name}-api_openapi-v{version}.json → { version: 'v3.0.3', format: 'OpenAPI 3.0.3', filename }
-    function parseSpecFile(files) {
-      const f = files.find(f => f.type === 'file' && f.name.endsWith('.json') && f.name.includes('openapi'));
-      if (!f) return {};
-      const m = f.name.match(/openapi-v([\d.]+)\.json$/i);
-      return {
-        swagger: f.name,
-        version: m ? `v${m[1]}` : null,
-        format: m ? `OpenAPI ${m[1]}` : null,
-      };
-    }
-
-    function renderCard(folder, derived, meta = {}) {
+    function renderCard(folder, meta = {}) {
       const base = `https://warrentc3.github.io/netizen/${folder}`;
       const name = meta.name || folder;
       const desc = meta.description || '';
       const tags = meta.tags || [];
-      const swagger = derived.swagger;
+      const swagger = meta.spec_file || null;
+      const version = meta.spec_version ? `v${meta.spec_version}` : null;
+      const format = meta.spec_version ? `OpenAPI ${meta.spec_version}` : null;
 
       const actions = [
         `<a class="action-link-primary" href="${base}/" onclick="event.stopPropagation()">Swagger UI ↗</a>`,
@@ -600,8 +587,8 @@
       ].filter(Boolean).join('');
 
       const chips = [
-        derived.version ? `<span class="chip chip-green">${derived.version}</span>` : '',
-        derived.format ? `<span class="chip chip-blue">${derived.format}</span>` : '',
+        version ? `<span class="chip chip-green">${version}</span>` : '',
+        format ? `<span class="chip chip-blue">${format}</span>` : '',
         ...tags.map(t => `<span class="chip">${t}</span>`),
         meta.endpoints ? `<span class="chip chip-amber">${meta.endpoints} endpoints</span>` : '',
       ].filter(Boolean).join('');
@@ -617,42 +604,24 @@
       </a>`;
     }
 
+    // catalog.json is authored and CI-enriched by the repo maintainer — content is trusted
     async function loadCatalog() {
-      el.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+      el.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>'; // safe static markup
       try {
-        // Fetch root contents and catalog.json in parallel
-        const [contentsRes, catalogRes] = await Promise.all([
-          fetch(API),
-          fetch(`${RAW}/catalog.json`)
-        ]);
+        const res = await fetch(`${RAW}/catalog.json`);
+        if (!res.ok) throw new Error('catalog fetch failed');
+        const catalog = await res.json();
 
-        if (!contentsRes.ok) throw new Error('contents API failed');
-
-        const contents = await contentsRes.json();
-        const catalog = catalogRes.ok ? await catalogRes.json() : {};
-
-        const dirs = contents.filter(e => e.type === 'dir' && catalog[e.name]);
-        if (!dirs.length) {
-          el.innerHTML = '<div class="ghost-card">no specs yet</div>';
+        const entries = Object.entries(catalog);
+        if (!entries.length) {
+          el.innerHTML = '<div class="ghost-card">no specs yet</div>'; // safe static markup
           return;
         }
 
-        // For each dir fetch its contents to derive structural metadata
-        const cards = await Promise.all(dirs.map(async dir => {
-          try {
-            const res = await fetch(`${API}/${dir.name}`);
-            const files = res.ok ? await res.json() : [];
-            const derived = parseSpecFile(files);
-            const meta = catalog[dir.name] || {};
-            return renderCard(dir.name, derived, meta);
-          } catch {
-            return renderCard(dir.name, {}, catalog[dir.name] || {});
-          }
-        }));
-
-        el.innerHTML = cards.join('') + '<div class="ghost-card">+ more specs on the way</div>';
+        const cards = entries.map(([key, meta]) => renderCard(key, meta));
+        el.innerHTML = cards.join('') + '<div class="ghost-card">+ more specs on the way</div>'; // safe — renderCard output is template-controlled
       } catch (e) {
-        el.innerHTML = '<p class="error-msg">Could not load catalog — check back soon.</p>';
+        el.innerHTML = '<p class="error-msg">Could not load catalog — check back soon.</p>'; // safe static markup
       }
     }
 
