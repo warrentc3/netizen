@@ -555,19 +555,20 @@
 
     // Theme toggle
     const modes = ['system', 'dark', 'light'], icons = { system: '⊙', dark: '☽', light: '☀' };
-    let cur = 'system';
-    try { cur = localStorage.getItem('netizen-theme') || 'system' } catch (e) { }
+    let cur;
+    try { cur = localStorage.getItem('netizen-theme') || 'system'; } catch (e) { cur = 'system'; }
+    const btn = document.getElementById('theme-btn');
     function applyTheme(m) {
       const r = document.documentElement;
       if (m === 'dark') r.setAttribute('data-theme', 'dark');
       else if (m === 'light') r.setAttribute('data-theme', 'light');
       else r.removeAttribute('data-theme');
-      document.getElementById('theme-btn').textContent = icons[m];
+      if (btn) btn.textContent = icons[m];
     }
     applyTheme(cur);
-    document.getElementById('theme-btn').addEventListener('click', () => {
+    if (btn) btn.addEventListener('click', () => {
       cur = modes[(modes.indexOf(cur) + 1) % modes.length];
-      try { localStorage.setItem('netizen-theme', cur) } catch (e) { }
+      try { localStorage.setItem('netizen-theme', cur); } catch (e) { }
       applyTheme(cur);
     });
 
