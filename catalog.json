@@ -18,7 +18,7 @@
             "media"
         ],
         "endpoints": 31,
-        "upstream": "https://github.com/tvmaze/api",
+        "upstream": null,
         "site": "https://www.tvmaze.com/api"
     }
 }

@@ -58,12 +58,4 @@ jobs:
             fi
           done
 
-          # Check for catalog entries with no corresponding directory
-          while IFS= read -r key; do
-            if [[ ! -d "$key" ]]; then
-              echo "FAIL: catalog.json entry '$key' has no corresponding directory"
-              failed=1
-            fi
-          done <<< "$catalog_keys"
-
-          exit $failed
+          python3 scripts/validate-catalog.py
