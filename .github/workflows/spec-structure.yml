@@ -1,0 +1,57 @@
+name: Spec Directory Structure
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate spec directory structure
+        run: |
+          failed=0
+
+          for dir in */; do
+            # Skip hidden directories and non-spec dirs
+            name="${dir%/}"
+            [[ "$name" == .* ]] && continue
+
+            files=("$dir"*)
+            count=${#files[@]}
+
+            if [[ $count -ne 2 ]]; then
+              echo "FAIL: $dir — expected 2 files, found $count"
+              for f in "${files[@]}"; do echo "  $f"; done
+              failed=1
+              continue
+            fi
+
+            has_index=0
+            has_spec=0
+            for f in "${files[@]}"; do
+              [[ "$f" == "${dir}index.html" ]] && has_index=1
+              [[ "$f" =~ ^${dir}.*-api_openapi-v[0-9]+\.[0-9]+.*\.json$ ]] && has_spec=1
+            done
+
+            if [[ $has_index -eq 0 ]]; then
+              echo "FAIL: $dir — missing index.html"
+              failed=1
+            fi
+
+            if [[ $has_spec -eq 0 ]]; then
+              echo "FAIL: $dir — missing *-api_openapi-v{version}.json"
+              for f in "${files[@]}"; do echo "  $f"; done
+              failed=1
+            fi
+
+            if [[ $has_index -eq 1 && $has_spec -eq 1 ]]; then
+              echo "OK:   $dir"
+            fi
+          done
+
+          exit $failed

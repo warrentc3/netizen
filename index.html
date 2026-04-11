@@ -1,62 +1,661 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>netizen — API Specs</title>
+  <script>
+    try {
+      const t = localStorage.getItem('netizen-theme');
+      if (t === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      else if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    } catch (e) { }
+  </script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; padding: 3rem 2rem; }
-    h1 { font-size: 2rem; font-weight: 700; color: #f8fafc; margin-bottom: .4rem; }
-    .tagline { color: #64748b; font-size: .95rem; margin-bottom: 3rem; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem; max-width: 900px; }
-    .card { background: #1e2330; border: 1px solid #2d3348; border-radius: 8px; padding: 1.4rem; text-decoration: none; color: inherit; transition: border-color .15s, transform .1s; display: block; }
-    .card:hover { border-color: #475569; transform: translateY(-2px); }
-    .card-title { font-size: 1rem; font-weight: 600; color: #f1f5f9; margin-bottom: .4rem; }
-    .card-version { font-size: .72rem; font-family: monospace; color: #475569; margin-bottom: .6rem; }
-    .card-desc { font-size: .82rem; color: #94a3b8; line-height: 1.5; }
-    .card-links { margin-top: 1rem; display: flex; gap: .8rem; }
-    .badge { font-size: .7rem; padding: .2rem .5rem; border-radius: 4px; background: #1a2744; color: #93c5fd; border: 1px solid #1e3a6e; text-decoration: none; }
-    .badge:hover { background: #1e3a6e; }
-    footer { margin-top: 4rem; color: #334155; font-size: .78rem; }
-    .about { max-width: 620px; margin-top: 3rem; color: #64748b; font-size: .82rem; line-height: 1.7; }
-    .about a { color: #475569; }
-    .about a:hover { color: #94a3b8; }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      font-family: system-ui, -apple-system, sans-serif
+    }
+
+    body {
+      background: #fff;
+      color: #111
+    }
+
+    [data-theme="dark"] body {
+      background: #111;
+      color: #f0f0f0
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #111;
+        color: #f0f0f0
+      }
+    }
+
+    .wrap {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 0 1.5rem 3rem
+    }
+
+    .site-header {
+      padding: 2.5rem 0 2rem;
+      border-bottom: 0.5px solid rgba(0, 0, 0, 0.12);
+      margin-bottom: 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start
+    }
+
+    [data-theme="dark"] .site-header {
+      border-bottom-color: rgba(255, 255, 255, 0.12)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .site-header {
+        border-bottom-color: rgba(255, 255, 255, 0.12)
+      }
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px
+    }
+
+    .wordmark {
+      font-size: 26px;
+      font-weight: 500;
+      letter-spacing: -0.5px;
+      line-height: 1
+    }
+
+    .tagline {
+      font-size: 13px;
+      color: #666;
+      margin-top: 6px
+    }
+
+    [data-theme="dark"] .tagline {
+      color: #999
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .tagline {
+        color: #999
+      }
+    }
+
+    .theme-btn {
+      background: none;
+      border: 0.5px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      padding: 5px 9px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #666;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 4px
+    }
+
+    .theme-btn:hover {
+      border-color: rgba(0, 0, 0, 0.4);
+      color: #111
+    }
+
+    [data-theme="dark"] .theme-btn {
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #999
+    }
+
+    [data-theme="dark"] .theme-btn:hover {
+      border-color: rgba(255, 255, 255, 0.4);
+      color: #f0f0f0
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .theme-btn {
+        border-color: rgba(255, 255, 255, 0.2);
+        color: #999
+      }
+    }
+
+    .catalog-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-bottom: 1rem
+    }
+
+    .spec-card {
+      background: #fff;
+      border: 0.5px solid rgba(0, 0, 0, 0.12);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      align-items: start;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      text-decoration: none;
+      color: inherit
+    }
+
+    .spec-card:hover {
+      border-color: rgba(0, 0, 0, 0.35)
+    }
+
+    [data-theme="dark"] .spec-card {
+      background: #1a1a1a;
+      border-color: rgba(255, 255, 255, 0.1)
+    }
+
+    [data-theme="dark"] .spec-card:hover {
+      border-color: rgba(255, 255, 255, 0.3)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .spec-card {
+        background: #1a1a1a;
+        border-color: rgba(255, 255, 255, 0.1)
+      }
+
+      .spec-card:hover {
+        border-color: rgba(255, 255, 255, 0.3)
+      }
+    }
+
+    .spec-name {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 4px
+    }
+
+    .spec-desc {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 14px
+    }
+
+    [data-theme="dark"] .spec-desc {
+      color: #999
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .spec-desc {
+        color: #999
+      }
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px
+    }
+
+    .chip {
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: #f4f4f4;
+      color: #666;
+      border: 0.5px solid rgba(0, 0, 0, 0.1)
+    }
+
+    [data-theme="dark"] .chip {
+      background: #222;
+      color: #999;
+      border-color: rgba(255, 255, 255, 0.1)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .chip {
+        background: #222;
+        color: #999;
+        border-color: rgba(255, 255, 255, 0.1)
+      }
+    }
+
+    .chip-green {
+      background: #EAF3DE;
+      color: #3B6D11;
+      border-color: #C0DD97
+    }
+
+    .chip-blue {
+      background: #E6F1FB;
+      color: #185FA5;
+      border-color: #B5D4F4
+    }
+
+    .chip-amber {
+      background: #FAEEDA;
+      color: #854F0B;
+      border-color: #FAC775
+    }
+
+    [data-theme="dark"] .chip-green {
+      background: #27500A;
+      color: #C0DD97;
+      border-color: #3B6D11
+    }
+
+    [data-theme="dark"] .chip-blue {
+      background: #0C447C;
+      color: #B5D4F4;
+      border-color: #185FA5
+    }
+
+    [data-theme="dark"] .chip-amber {
+      background: #633806;
+      color: #FAC775;
+      border-color: #854F0B
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .chip-green {
+        background: #27500A;
+        color: #C0DD97;
+        border-color: #3B6D11
+      }
+
+      .chip-blue {
+        background: #0C447C;
+        color: #B5D4F4;
+        border-color: #185FA5
+      }
+
+      .chip-amber {
+        background: #633806;
+        color: #FAC775;
+        border-color: #854F0B
+      }
+    }
+
+    .spec-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: flex-end;
+      white-space: nowrap
+    }
+
+    .action-link {
+      font-size: 12px;
+      color: #666;
+      text-decoration: none;
+      padding: 4px 8px;
+      border-radius: 8px;
+      display: block
+    }
+
+    .action-link:hover {
+      background: #f4f4f4;
+      color: #111
+    }
+
+    [data-theme="dark"] .action-link {
+      color: #999
+    }
+
+    [data-theme="dark"] .action-link:hover {
+      background: #222;
+      color: #f0f0f0
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .action-link {
+        color: #999
+      }
+
+      .action-link:hover {
+        background: #222
+      }
+    }
+
+    .action-link-primary {
+      font-size: 12px;
+      font-weight: 500;
+      color: #185FA5;
+      text-decoration: none;
+      padding: 4px 8px;
+      border: 0.5px solid #B5D4F4;
+      border-radius: 8px;
+      display: block
+    }
+
+    .action-link-primary:hover {
+      background: #E6F1FB
+    }
+
+    [data-theme="dark"] .action-link-primary {
+      color: #B5D4F4;
+      border-color: #185FA5
+    }
+
+    [data-theme="dark"] .action-link-primary:hover {
+      background: #0C447C
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .action-link-primary {
+        color: #B5D4F4;
+        border-color: #185FA5
+      }
+
+      .action-link-primary:hover {
+        background: #0C447C
+      }
+    }
+
+    .ghost-card {
+      border: 0.5px dashed rgba(0, 0, 0, 0.15);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: 13px;
+      min-height: 90px
+    }
+
+    [data-theme="dark"] .ghost-card {
+      border-color: rgba(255, 255, 255, 0.12)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .ghost-card {
+        border-color: rgba(255, 255, 255, 0.12)
+      }
+    }
+
+    .skeleton {
+      background: #f4f4f4;
+      border-radius: 12px;
+      height: 130px;
+      margin-bottom: 1rem;
+      animation: pulse 1.4s ease-in-out infinite
+    }
+
+    [data-theme="dark"] .skeleton {
+      background: #1e1e1e
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .skeleton {
+        background: #1e1e1e
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.5
+      }
+    }
+
+    .site-footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 0.5px solid rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    [data-theme="dark"] .site-footer {
+      border-top-color: rgba(255, 255, 255, 0.1)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .site-footer {
+        border-top-color: rgba(255, 255, 255, 0.1)
+      }
+    }
+
+    .footer-link {
+      font-size: 12px;
+      color: #aaa;
+      text-decoration: none
+    }
+
+    .footer-link:hover {
+      color: #666
+    }
+
+    .footer-badge {
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      padding: 3px 10px;
+      border-radius: 4px;
+      background: #f4f4f4;
+      color: #aaa;
+      border: 0.5px solid rgba(0, 0, 0, 0.1)
+    }
+
+    [data-theme="dark"] .footer-badge {
+      background: #222;
+      border-color: rgba(255, 255, 255, 0.1)
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .footer-badge {
+        background: #222;
+        border-color: rgba(255, 255, 255, 0.1)
+      }
+    }
+
+    .mc {
+      fill: #7F77DD
+    }
+
+    .mr {
+      fill: #D85A30
+    }
+
+    [data-theme="dark"] .mc {
+      fill: #AFA9EC
+    }
+
+    [data-theme="dark"] .mr {
+      fill: #F0997B
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .mc {
+        fill: #AFA9EC
+      }
+
+      .mr {
+        fill: #F0997B
+      }
+    }
+
+    .error-msg {
+      font-size: 13px;
+      color: #aaa;
+      text-align: center;
+      padding: 2rem 0
+    }
   </style>
 </head>
+
 <body>
-  <h1>netizen</h1>
-  <p class="tagline">For the Community, by the Community. &mdash; High-quality API specs and interactive docs for tools that deserve better documentation.</p>
-  <div class="grid">
-    <a class="card" href="./technitium-dns/">
-      <div class="card-title">Technitium DNS Server</div>
-      <div class="card-version">v14.3 &mdash; OpenAPI 3.0.3</div>
-      <div class="card-desc">Complete API spec for Technitium DNS Server. 129 endpoints across zones, DHCP, settings, cache, apps, logging, and cluster management.</div>
-      <div class="card-links">
-        <a class="badge" href="./technitium-dns/">Swagger UI</a>
-        <a class="badge" href="./technitium-dns/technitium-dns-api_openapi-v3.0.3.json">JSON Spec</a>
-        <a class="badge" href="https://github.com/TechnitiumSoftware/DnsServer" target="_blank">GitHub</a>
-        <a class="badge" href="https://technitium.com/dns/" target="_blank">Website</a>
+  <div class="wrap">
+    <header class="site-header">
+      <div class="brand">
+        <svg width="60" height="40" viewBox="248 97 182 120" role="img" aria-label="netizen mark">
+          <defs>
+            <clipPath id="mc">
+              <circle cx="294" cy="171" r="32" />
+              <circle cx="342" cy="152" r="47" />
+              <circle cx="392" cy="171" r="32" />
+              <rect x="257" y="174" width="170" height="33" rx="16" />
+            </clipPath>
+          </defs>
+          <g class="mc">
+            <circle cx="294" cy="171" r="32" />
+            <circle cx="342" cy="152" r="47" />
+            <circle cx="392" cy="171" r="32" />
+            <rect x="257" y="174" width="170" height="33" rx="16" />
+          </g>
+          <path class="mr" clip-path="url(#mc)" d="M 297,65 L 430,277 L 414,287 L 281,75 Z" />
+          <g class="mr" transform="translate(316,113) rotate(-46)">
+            <path d="M 0,0 C -13,-17 -35,-24 -30,-9 C -25,6 -8,9 0,0 Z" />
+            <path d="M 0,0 C 13,-17 35,-24 30,-9 C 25,6 8,9 0,0 Z" />
+            <ellipse rx="7" ry="5" />
+          </g>
+        </svg>
+        <div>
+          <div class="wordmark">netizen</div>
+          <div class="tagline">For the Community, by the Community.</div>
+        </div>
       </div>
-    </a>
-    <a class="card" href="./tvmaze/">
-      <div class="card-title">TVmaze API</div>
-      <div class="card-version">unversioned &mdash; OpenAPI 3.0.3</div>
-      <div class="card-desc">Complete API spec for TVmaze. 31 endpoints across search, schedule, shows, episodes, people, and updates. Live-validated response shapes with 28 reusable schemas.</div>
-      <div class="card-links">
-        <a class="badge" href="./tvmaze/">Swagger UI</a>
-        <a class="badge" href="./tvmaze/tvmaze-api_openapi-v3.0.3.json">JSON Spec</a>
-        <a class="badge" href="https://www.tvmaze.com/api" target="_blank">API Docs</a>
-      </div>
-    </a>
+      <button class="theme-btn" id="theme-btn">⊙</button>
+    </header>
+
+    <p class="catalog-label">Catalog</p>
+    <div id="catalog"></div>
+
+    <footer class="site-footer">
+      <a class="footer-link" href="https://github.com/warrentc3/netizen">github.com/warrentc3/netizen</a>
+      <span class="footer-badge">CC licensed</span>
+    </footer>
   </div>
-  <div class="about">
-    <p>Built by <a href="https://github.com/warrentc3" target="_blank">Warren Carrigan</a> — a homelab veteran and infrastructure toolsmith with two decades of hard-won expertise in media automation, DNS, VPN, and self-hosted systems. These specs exist because good tooling deserves proper documentation, and proper documentation requires someone who actually understands the surface they&rsquo;re mapping.</p>
-  </div>
-  <footer>
-    <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" style="color:#475569;">CC BY 4.0</a>
-    &mdash; &copy; 2026 Warren Carrigan
-    &mdash; <a href="https://github.com/warrentc3/netizen" style="color:#475569;">github.com/warrentc3/netizen</a>
-  </footer>
+
+  <script>
+    const REPO = 'warrentc3/netizen';
+    const RAW = `https://raw.githubusercontent.com/${REPO}/main`;
+    const API = `https://api.github.com/repos/${REPO}/contents`;
+    const el = document.getElementById('catalog');
+
+    // Theme toggle
+    const modes = ['system', 'dark', 'light'], icons = { system: '⊙', dark: '☽', light: '☀' };
+    let cur = 'system';
+    try { cur = localStorage.getItem('netizen-theme') || 'system' } catch (e) { }
+    function applyTheme(m) {
+      const r = document.documentElement;
+      if (m === 'dark') r.setAttribute('data-theme', 'dark');
+      else if (m === 'light') r.setAttribute('data-theme', 'light');
+      else r.removeAttribute('data-theme');
+      document.getElementById('theme-btn').textContent = icons[m];
+    }
+    applyTheme(cur);
+    document.getElementById('theme-btn').addEventListener('click', () => {
+      cur = modes[(modes.indexOf(cur) + 1) % modes.length];
+      try { localStorage.setItem('netizen-theme', cur) } catch (e) { }
+      applyTheme(cur);
+    });
+
+    // Parse version and format from filename convention:
+    // {name}-api_openapi-v{version}.json → { version: 'v3.0.3', format: 'OpenAPI 3.0.3', filename }
+    function parseSpecFile(files) {
+      const f = files.find(f => f.type === 'file' && f.name.endsWith('.json') && f.name.includes('openapi'));
+      if (!f) return {};
+      const m = f.name.match(/openapi-v([\d.]+)\.json$/i);
+      return {
+        swagger: f.name,
+        version: m ? `v${m[1]}` : null,
+        format: m ? `OpenAPI ${m[1]}` : null,
+      };
+    }
+
+    function renderCard(folder, derived, meta = {}) {
+      const base = `https://warrentc3.github.io/netizen/${folder}`;
+      const name = meta.name || folder;
+      const desc = meta.description || '';
+      const tags = meta.tags || [];
+      const swagger = derived.swagger;
+
+      const actions = [
+        `<a class="action-link-primary" href="${base}/" onclick="event.stopPropagation()">Swagger UI ↗</a>`,
+        swagger ? `<a class="action-link" href="${base}/${swagger}" onclick="event.stopPropagation()">JSON spec ↗</a>` : '',
+        meta.upstream ? `<a class="action-link" href="${meta.upstream}" onclick="event.stopPropagation()">GitHub ↗</a>` : '',
+        meta.site ? `<a class="action-link" href="${meta.site}" onclick="event.stopPropagation()">Website ↗</a>` : '',
+      ].filter(Boolean).join('');
+
+      const chips = [
+        derived.version ? `<span class="chip chip-green">${derived.version}</span>` : '',
+        derived.format ? `<span class="chip chip-blue">${derived.format}</span>` : '',
+        ...tags.map(t => `<span class="chip">${t}</span>`),
+        meta.endpoints ? `<span class="chip chip-amber">${meta.endpoints} endpoints</span>` : '',
+      ].filter(Boolean).join('');
+
+      return `
+      <a class="spec-card" href="${base}/">
+        <div>
+          <div class="spec-name">${name}</div>
+          ${desc ? `<p class="spec-desc">${desc}</p>` : ''}
+          <div class="chips">${chips}</div>
+        </div>
+        <div class="spec-actions">${actions}</div>
+      </a>`;
+    }
+
+    async function loadCatalog() {
+      el.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+      try {
+        // Fetch root contents and catalog.json in parallel
+        const [contentsRes, catalogRes] = await Promise.all([
+          fetch(API),
+          fetch(`${RAW}/catalog.json`)
+        ]);
+
+        if (!contentsRes.ok) throw new Error('contents API failed');
+
+        const contents = await contentsRes.json();
+        const catalog = catalogRes.ok ? await catalogRes.json() : {};
+
+        const dirs = contents.filter(e => e.type === 'dir' && !e.name.startsWith('.'));
+        if (!dirs.length) {
+          el.innerHTML = '<div class="ghost-card">no specs yet</div>';
+          return;
+        }
+
+        // For each dir fetch its contents to derive structural metadata
+        const cards = await Promise.all(dirs.map(async dir => {
+          try {
+            const res = await fetch(`${API}/${dir.name}`);
+            const files = res.ok ? await res.json() : [];
+            const derived = parseSpecFile(files);
+            const meta = catalog[dir.name] || {};
+            return renderCard(dir.name, derived, meta);
+          } catch {
+            return renderCard(dir.name, {}, catalog[dir.name] || {});
+          }
+        }));
+
+        el.innerHTML = cards.join('') + '<div class="ghost-card">+ more specs on the way</div>';
+      } catch (e) {
+        el.innerHTML = '<p class="error-msg">Could not load catalog — check back soon.</p>';
+      }
+    }
+
+    loadCatalog();
+  </script>
 </body>
+
 </html>
