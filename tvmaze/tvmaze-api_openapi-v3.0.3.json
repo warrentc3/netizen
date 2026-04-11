@@ -1,0 +1,1264 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TVmaze API",
+    "version": "unversioned",
+    "description": "TVmaze public API for show, episode, cast, schedule, and people data. No authentication required. Rate limit: 20 requests per 10 seconds per IP. All responses are JSON. CORS enabled.",
+    "license": {
+      "name": "CC BY-SA 4.0",
+      "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    "contact": {
+      "name": "TVmaze API Docs",
+      "url": "https://www.tvmaze.com/api"
+    }
+  },
+  "servers": [
+    { "url": "https://api.tvmaze.com" }
+  ],
+  "paths": {
+    "/search/shows": {
+      "get": {
+        "summary": "Search shows",
+        "operationId": "searchShows",
+        "tags": ["Search"],
+        "parameters": [
+          { "$ref": "#/components/parameters/q" },
+          { "$ref": "#/components/parameters/embed" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of scored show results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ShowSearchResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/singlesearch/shows": {
+      "get": {
+        "summary": "Single best-match show search",
+        "operationId": "singleSearchShows",
+        "tags": ["Search"],
+        "parameters": [
+          { "$ref": "#/components/parameters/q" },
+          { "$ref": "#/components/parameters/embed" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Best matching show",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Show" }
+              }
+            }
+          },
+          "404": { "description": "No show found" }
+        }
+      }
+    },
+    "/lookup/shows": {
+      "get": {
+        "summary": "Lookup show by external ID",
+        "operationId": "lookupShows",
+        "tags": ["Search"],
+        "parameters": [
+          {
+            "name": "tvrage",
+            "in": "query",
+            "description": "TVRage show ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "thetvdb",
+            "in": "query",
+            "description": "TheTVDB show ID",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "imdb",
+            "in": "query",
+            "description": "IMDb show ID (e.g. tt1553656)",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matched show",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Show" }
+              }
+            }
+          },
+          "404": { "description": "No show found for given external ID" }
+        }
+      }
+    },
+    "/search/people": {
+      "get": {
+        "summary": "Search people",
+        "operationId": "searchPeople",
+        "tags": ["Search"],
+        "parameters": [
+          { "$ref": "#/components/parameters/q" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of scored person results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PersonSearchResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedule": {
+      "get": {
+        "summary": "TV broadcast schedule",
+        "operationId": "getSchedule",
+        "tags": ["Schedule"],
+        "parameters": [
+          { "$ref": "#/components/parameters/country" },
+          { "$ref": "#/components/parameters/date" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of scheduled episodes with embedded show",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ScheduleEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedule/web": {
+      "get": {
+        "summary": "Streaming/web channel schedule",
+        "operationId": "getWebSchedule",
+        "tags": ["Schedule"],
+        "parameters": [
+          { "$ref": "#/components/parameters/date" },
+          {
+            "name": "country",
+            "in": "query",
+            "description": "ISO 3166-1 alpha-2 country code, or 'global' for globally available content",
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of scheduled web episodes with embedded show",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ScheduleEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedule/full": {
+      "get": {
+        "summary": "Full schedule — all future episodes known to TVmaze",
+        "operationId": "getFullSchedule",
+        "tags": ["Schedule"],
+        "responses": {
+          "200": {
+            "description": "Array of all known future scheduled episodes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ScheduleEntry" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows": {
+      "get": {
+        "summary": "Paginated index of all shows",
+        "operationId": "listShows",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/page" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of shows for the requested page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Show" }
+                }
+              }
+            }
+          },
+          "404": { "description": "No shows beyond this page" }
+        }
+      }
+    },
+    "/shows/{id}": {
+      "get": {
+        "summary": "Get show by ID",
+        "operationId": "getShow",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" },
+          { "$ref": "#/components/parameters/embed" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Show object",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Show" }
+              }
+            }
+          },
+          "404": { "description": "Show not found" }
+        }
+      }
+    },
+    "/shows/{id}/episodes": {
+      "get": {
+        "summary": "List all episodes for a show",
+        "operationId": "getShowEpisodes",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" },
+          {
+            "name": "specials",
+            "in": "query",
+            "description": "Include special episodes (1 = include, 0 = exclude)",
+            "schema": { "type": "integer", "enum": [0, 1], "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of episodes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Episode" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows/{id}/episodebynumber": {
+      "get": {
+        "summary": "Get single episode by season and number",
+        "operationId": "getEpisodeByNumber",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" },
+          {
+            "name": "season",
+            "in": "query",
+            "required": true,
+            "description": "Season number",
+            "schema": { "type": "integer" }
+          },
+          {
+            "name": "number",
+            "in": "query",
+            "required": true,
+            "description": "Episode number within the season",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Episode object",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Episode" }
+              }
+            }
+          },
+          "404": { "description": "Episode not found" }
+        }
+      }
+    },
+    "/shows/{id}/episodesbydate": {
+      "get": {
+        "summary": "Get episodes that aired on a specific date",
+        "operationId": "getEpisodesByDate",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "description": "ISO 8601 date (YYYY-MM-DD)",
+            "schema": { "type": "string", "format": "date" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of episodes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Episode" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows/{id}/seasons": {
+      "get": {
+        "summary": "List seasons for a show",
+        "operationId": "getShowSeasons",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of seasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Season" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seasons/{id}/episodes": {
+      "get": {
+        "summary": "List episodes for a season",
+        "operationId": "getSeasonEpisodes",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/seasonId" },
+          {
+            "name": "specials",
+            "in": "query",
+            "description": "Include special episodes (1 = include, 0 = exclude)",
+            "schema": { "type": "integer", "enum": [0, 1], "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of episodes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Episode" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows/{id}/cast": {
+      "get": {
+        "summary": "Get cast for a show",
+        "operationId": "getShowCast",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of cast entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CastMember" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows/{id}/crew": {
+      "get": {
+        "summary": "Get crew for a show",
+        "operationId": "getShowCrew",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of crew entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CrewMember" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows/{id}/akas": {
+      "get": {
+        "summary": "Get alternate names (AKAs) for a show",
+        "operationId": "getShowAkas",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of AKA entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Aka" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows/{id}/images": {
+      "get": {
+        "summary": "Get images for a show",
+        "operationId": "getShowImages",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of image objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ShowImage" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shows/{id}/alternatelists": {
+      "get": {
+        "summary": "Get alternate episode lists for a show",
+        "operationId": "getShowAlternateLists",
+        "tags": ["Shows"],
+        "parameters": [
+          { "$ref": "#/components/parameters/showId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of alternate lists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AlternateList" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alternatelists/{id}": {
+      "get": {
+        "summary": "Get a specific alternate list",
+        "operationId": "getAlternateList",
+        "tags": ["Shows"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Alternate list ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alternate list object",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AlternateList" }
+              }
+            }
+          },
+          "404": { "description": "Alternate list not found" }
+        }
+      }
+    },
+    "/alternatelists/{id}/alternateepisodes": {
+      "get": {
+        "summary": "Get alternate episodes within an alternate list",
+        "operationId": "getAlternateEpisodes",
+        "tags": ["Shows"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Alternate list ID",
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of alternate episode entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AlternateEpisode" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/episodes/{id}": {
+      "get": {
+        "summary": "Get episode by ID",
+        "operationId": "getEpisode",
+        "tags": ["Episodes"],
+        "parameters": [
+          { "$ref": "#/components/parameters/episodeId" },
+          { "$ref": "#/components/parameters/embed" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Episode object",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Episode" }
+              }
+            }
+          },
+          "404": { "description": "Episode not found" }
+        }
+      }
+    },
+    "/episodes/{id}/guestcast": {
+      "get": {
+        "summary": "Get guest cast for an episode",
+        "operationId": "getEpisodeGuestCast",
+        "tags": ["Episodes"],
+        "parameters": [
+          { "$ref": "#/components/parameters/episodeId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of guest cast entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CastMember" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/episodes/{id}/guestcrew": {
+      "get": {
+        "summary": "Get guest crew for an episode",
+        "operationId": "getEpisodeGuestCrew",
+        "tags": ["Episodes"],
+        "parameters": [
+          { "$ref": "#/components/parameters/episodeId" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of guest crew entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CrewMember" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/people": {
+      "get": {
+        "summary": "Paginated index of all people",
+        "operationId": "listPeople",
+        "tags": ["People"],
+        "parameters": [
+          { "$ref": "#/components/parameters/page" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of person objects for the requested page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Person" }
+                }
+              }
+            }
+          },
+          "404": { "description": "No people beyond this page" }
+        }
+      }
+    },
+    "/people/{id}": {
+      "get": {
+        "summary": "Get person by ID",
+        "operationId": "getPerson",
+        "tags": ["People"],
+        "parameters": [
+          { "$ref": "#/components/parameters/personId" },
+          { "$ref": "#/components/parameters/embed" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Person object",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Person" }
+              }
+            }
+          },
+          "404": { "description": "Person not found" }
+        }
+      }
+    },
+    "/people/{id}/castcredits": {
+      "get": {
+        "summary": "Get cast credits for a person",
+        "operationId": "getPersonCastCredits",
+        "tags": ["People"],
+        "parameters": [
+          { "$ref": "#/components/parameters/personId" },
+          { "$ref": "#/components/parameters/embed" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of cast credit entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CastCredit" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/people/{id}/crewcredits": {
+      "get": {
+        "summary": "Get crew credits for a person",
+        "operationId": "getPersonCrewCredits",
+        "tags": ["People"],
+        "parameters": [
+          { "$ref": "#/components/parameters/personId" },
+          { "$ref": "#/components/parameters/embed" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of crew credit entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CrewCredit" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/people/{id}/guestcastcredits": {
+      "get": {
+        "summary": "Get guest cast credits for a person",
+        "operationId": "getPersonGuestCastCredits",
+        "tags": ["People"],
+        "parameters": [
+          { "$ref": "#/components/parameters/personId" },
+          { "$ref": "#/components/parameters/embed" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Array of guest cast credit entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/CastCredit" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/updates/shows": {
+      "get": {
+        "summary": "Get show update timestamps",
+        "operationId": "getShowUpdates",
+        "tags": ["Updates"],
+        "parameters": [
+          { "$ref": "#/components/parameters/since" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Map of show ID (string) to Unix timestamp of last update",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UpdatesMap" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/updates/people": {
+      "get": {
+        "summary": "Get people update timestamps",
+        "operationId": "getPeopleUpdates",
+        "tags": ["Updates"],
+        "parameters": [
+          { "$ref": "#/components/parameters/since" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Map of person ID (string) to Unix timestamp of last update",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UpdatesMap" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "showId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "TVmaze show ID",
+        "schema": { "type": "integer" }
+      },
+      "episodeId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "TVmaze episode ID",
+        "schema": { "type": "integer" }
+      },
+      "seasonId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "TVmaze season ID",
+        "schema": { "type": "integer" }
+      },
+      "personId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "TVmaze person ID",
+        "schema": { "type": "integer" }
+      },
+      "q": {
+        "name": "q",
+        "in": "query",
+        "required": true,
+        "description": "Search query string",
+        "schema": { "type": "string" }
+      },
+      "embed": {
+        "name": "embed",
+        "in": "query",
+        "required": false,
+        "description": "Embed related resource inline. Supported values vary by endpoint: 'episodes', 'cast', 'crew', 'akas', 'seasons', 'images', 'show', 'previousepisode', 'nextepisode'. Multiple embeds: repeat the parameter.",
+        "schema": { "type": "string" }
+      },
+      "page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Zero-based page number for paginated index endpoints",
+        "schema": { "type": "integer", "default": 0, "minimum": 0 }
+      },
+      "date": {
+        "name": "date",
+        "in": "query",
+        "required": false,
+        "description": "ISO 8601 date string (YYYY-MM-DD). Defaults to today (server local time).",
+        "schema": { "type": "string", "format": "date" }
+      },
+      "country": {
+        "name": "country",
+        "in": "query",
+        "required": false,
+        "description": "ISO 3166-1 alpha-2 country code (e.g. US, GB, CA). Defaults to US.",
+        "schema": { "type": "string", "pattern": "^[A-Z]{2}$" }
+      },
+      "since": {
+        "name": "since",
+        "in": "query",
+        "required": false,
+        "description": "Filter updates to only those newer than this window",
+        "schema": { "type": "string", "enum": ["day", "week", "month"] }
+      }
+    },
+    "schemas": {
+      "Show": {
+        "type": "object",
+        "description": "A TV show",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "url": { "type": "string", "format": "uri", "example": "https://www.tvmaze.com/shows/1/under-the-dome" },
+          "name": { "type": "string", "example": "Under the Dome" },
+          "type": {
+            "type": "string",
+            "description": "Show format type",
+            "enum": ["Scripted", "Reality", "Talk Show", "Game Show", "News", "Documentary", "Sports", "Variety", "Animation", "Anime", "Panel Show", "Award Show"],
+            "example": "Scripted"
+          },
+          "language": { "type": "string", "nullable": true, "example": "English" },
+          "genres": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["Drama", "Science-Fiction", "Thriller"]
+          },
+          "status": {
+            "type": "string",
+            "description": "Current show status",
+            "enum": ["Running", "Ended", "To Be Determined", "In Development"],
+            "example": "Ended"
+          },
+          "runtime": { "type": "integer", "nullable": true, "description": "Episode runtime in minutes", "example": 60 },
+          "averageRuntime": { "type": "integer", "nullable": true, "description": "Average episode runtime in minutes", "example": 60 },
+          "premiered": { "type": "string", "format": "date", "nullable": true, "example": "2013-06-24" },
+          "ended": { "type": "string", "format": "date", "nullable": true, "example": "2015-09-10" },
+          "officialSite": { "type": "string", "format": "uri", "nullable": true, "example": "http://www.cbs.com/shows/under-the-dome/" },
+          "schedule": { "$ref": "#/components/schemas/Schedule" },
+          "rating": { "$ref": "#/components/schemas/Rating" },
+          "weight": { "type": "integer", "description": "TVmaze internal popularity weight (0-100)", "example": 99 },
+          "network": { "$ref": "#/components/schemas/Network", "nullable": true },
+          "webChannel": { "$ref": "#/components/schemas/WebChannel", "nullable": true },
+          "dvdCountry": { "$ref": "#/components/schemas/Country", "nullable": true },
+          "externals": { "$ref": "#/components/schemas/Externals" },
+          "image": { "$ref": "#/components/schemas/Image", "nullable": true },
+          "summary": { "type": "string", "nullable": true, "description": "HTML-formatted show summary" },
+          "updated": { "type": "integer", "description": "Unix timestamp of last update", "example": 1769177765 },
+          "_links": { "$ref": "#/components/schemas/ShowLinks" }
+        }
+      },
+      "Episode": {
+        "type": "object",
+        "description": "A single TV episode",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "url": { "type": "string", "format": "uri", "example": "https://www.tvmaze.com/episodes/1/under-the-dome-1x01-pilot" },
+          "name": { "type": "string", "example": "Pilot" },
+          "season": { "type": "integer", "example": 1 },
+          "number": { "type": "integer", "nullable": true, "description": "Episode number within the season; null for specials", "example": 1 },
+          "type": {
+            "type": "string",
+            "enum": ["regular", "significant_special", "insignificant_special"],
+            "example": "regular"
+          },
+          "airdate": { "type": "string", "format": "date", "example": "2013-06-24" },
+          "airtime": { "type": "string", "description": "Local air time HH:MM", "example": "22:00" },
+          "airstamp": { "type": "string", "format": "date-time", "description": "ISO 8601 UTC air time", "example": "2013-06-25T02:00:00+00:00" },
+          "runtime": { "type": "integer", "nullable": true, "description": "Episode runtime in minutes", "example": 60 },
+          "rating": { "$ref": "#/components/schemas/Rating" },
+          "image": { "$ref": "#/components/schemas/Image", "nullable": true },
+          "summary": { "type": "string", "nullable": true, "description": "HTML-formatted episode summary" },
+          "show": { "$ref": "#/components/schemas/Show", "description": "Embedded show — present in schedule responses and when embed=show is used" },
+          "_links": { "$ref": "#/components/schemas/EpisodeLinks" }
+        }
+      },
+      "Season": {
+        "type": "object",
+        "description": "A season of a TV show",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "url": { "type": "string", "format": "uri", "example": "https://www.tvmaze.com/seasons/1/under-the-dome-season-1" },
+          "number": { "type": "integer", "example": 1 },
+          "name": { "type": "string", "example": "" },
+          "episodeOrder": { "type": "integer", "nullable": true, "example": 13 },
+          "premiereDate": { "type": "string", "format": "date", "nullable": true, "example": "2013-06-24" },
+          "endDate": { "type": "string", "format": "date", "nullable": true, "example": "2013-09-16" },
+          "network": { "$ref": "#/components/schemas/Network", "nullable": true },
+          "webChannel": { "$ref": "#/components/schemas/WebChannel", "nullable": true },
+          "image": { "$ref": "#/components/schemas/Image", "nullable": true },
+          "summary": { "type": "string", "nullable": true },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "self": { "$ref": "#/components/schemas/LinkObject" }
+            }
+          }
+        }
+      },
+      "Person": {
+        "type": "object",
+        "description": "A person (actor, crew member, etc.)",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "url": { "type": "string", "format": "uri", "example": "https://www.tvmaze.com/people/1/mike-vogel" },
+          "name": { "type": "string", "example": "Mike Vogel" },
+          "country": { "$ref": "#/components/schemas/Country", "nullable": true },
+          "birthday": { "type": "string", "format": "date", "nullable": true, "example": "1979-07-17" },
+          "deathday": { "type": "string", "format": "date", "nullable": true, "example": null },
+          "gender": { "type": "string", "nullable": true, "example": "Male" },
+          "image": { "$ref": "#/components/schemas/Image", "nullable": true },
+          "updated": { "type": "integer", "description": "Unix timestamp of last update", "example": 1773316843 },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "self": { "$ref": "#/components/schemas/LinkObject" }
+            }
+          }
+        }
+      },
+      "Character": {
+        "type": "object",
+        "description": "A fictional character portrayed by a person",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "url": { "type": "string", "format": "uri" },
+          "name": { "type": "string", "example": "Dale \"Barbie\" Barbara" },
+          "image": { "$ref": "#/components/schemas/Image", "nullable": true },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "self": { "$ref": "#/components/schemas/LinkObject" }
+            }
+          }
+        }
+      },
+      "Network": {
+        "type": "object",
+        "description": "A broadcast TV network",
+        "properties": {
+          "id": { "type": "integer", "example": 2 },
+          "name": { "type": "string", "example": "CBS" },
+          "country": { "$ref": "#/components/schemas/Country", "nullable": true },
+          "officialSite": { "type": "string", "format": "uri", "nullable": true, "example": "https://www.cbs.com/" }
+        }
+      },
+      "WebChannel": {
+        "type": "object",
+        "description": "A streaming or web-based channel",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "country": { "$ref": "#/components/schemas/Country", "nullable": true },
+          "officialSite": { "type": "string", "format": "uri", "nullable": true }
+        }
+      },
+      "Country": {
+        "type": "object",
+        "description": "Country with timezone",
+        "properties": {
+          "name": { "type": "string", "example": "United States" },
+          "code": { "type": "string", "description": "ISO 3166-1 alpha-2", "example": "US" },
+          "timezone": { "type": "string", "description": "IANA timezone name", "example": "America/New_York" }
+        }
+      },
+      "Image": {
+        "type": "object",
+        "description": "Medium and original image URLs",
+        "properties": {
+          "medium": { "type": "string", "format": "uri", "example": "https://static.tvmaze.com/uploads/images/medium_portrait/610/1525272.jpg" },
+          "original": { "type": "string", "format": "uri", "example": "https://static.tvmaze.com/uploads/images/original_untouched/610/1525272.jpg" }
+        }
+      },
+      "ShowImage": {
+        "type": "object",
+        "description": "An image asset associated with a show",
+        "properties": {
+          "id": { "type": "integer" },
+          "type": {
+            "type": "string",
+            "description": "Image type",
+            "enum": ["poster", "banner", "background", "typography"]
+          },
+          "main": { "type": "boolean", "description": "Whether this is the primary image of its type" },
+          "resolutions": {
+            "type": "object",
+            "properties": {
+              "original": {
+                "type": "object",
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "width": { "type": "integer", "nullable": true },
+                  "height": { "type": "integer", "nullable": true }
+                }
+              },
+              "medium": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "url": { "type": "string", "format": "uri" },
+                  "width": { "type": "integer", "nullable": true },
+                  "height": { "type": "integer", "nullable": true }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Rating": {
+        "type": "object",
+        "description": "Average user rating",
+        "properties": {
+          "average": { "type": "number", "format": "float", "nullable": true, "example": 6.6 }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "description": "Broadcast schedule for a show",
+        "properties": {
+          "time": { "type": "string", "description": "Local air time HH:MM", "example": "22:00" },
+          "days": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            },
+            "example": ["Thursday"]
+          }
+        }
+      },
+      "Externals": {
+        "type": "object",
+        "description": "External database IDs",
+        "properties": {
+          "tvrage": { "type": "integer", "nullable": true, "example": 25988 },
+          "thetvdb": { "type": "integer", "nullable": true, "example": 264492 },
+          "imdb": { "type": "string", "nullable": true, "example": "tt1553656" }
+        }
+      },
+      "CastMember": {
+        "type": "object",
+        "description": "A person-character pairing in a show's cast",
+        "properties": {
+          "person": { "$ref": "#/components/schemas/Person" },
+          "character": { "$ref": "#/components/schemas/Character" },
+          "self": { "type": "boolean", "description": "Person plays themselves", "example": false },
+          "voice": { "type": "boolean", "description": "Voice-only role", "example": false }
+        }
+      },
+      "CrewMember": {
+        "type": "object",
+        "description": "A person in a show's crew",
+        "properties": {
+          "type": { "type": "string", "description": "Crew role (e.g. Creator, Director, Writer, Executive Producer)", "example": "Creator" },
+          "person": { "$ref": "#/components/schemas/Person" }
+        }
+      },
+      "CastCredit": {
+        "type": "object",
+        "description": "A person's acting credit — links to show and character",
+        "properties": {
+          "self": { "type": "boolean", "example": false },
+          "voice": { "type": "boolean", "example": false },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "show": { "$ref": "#/components/schemas/NamedLink" },
+              "character": { "$ref": "#/components/schemas/NamedLink" }
+            }
+          }
+        }
+      },
+      "CrewCredit": {
+        "type": "object",
+        "description": "A person's crew credit — links to show",
+        "properties": {
+          "type": { "type": "string", "description": "Crew role", "example": "Creator" },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "show": { "$ref": "#/components/schemas/NamedLink" }
+            }
+          }
+        }
+      },
+      "Aka": {
+        "type": "object",
+        "description": "An alternate name (title) for a show",
+        "properties": {
+          "name": { "type": "string" },
+          "country": { "$ref": "#/components/schemas/Country", "nullable": true }
+        }
+      },
+      "AlternateList": {
+        "type": "object",
+        "description": "An alternate episode ordering list for a show",
+        "properties": {
+          "id": { "type": "integer" },
+          "url": { "type": "string", "format": "uri" },
+          "name": { "type": "string" },
+          "networkId": { "type": "integer", "nullable": true },
+          "webChannelId": { "type": "integer", "nullable": true },
+          "dvdCountryId": { "type": "integer", "nullable": true },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "self": { "$ref": "#/components/schemas/LinkObject" },
+              "show": { "$ref": "#/components/schemas/LinkObject" }
+            }
+          }
+        }
+      },
+      "AlternateEpisode": {
+        "type": "object",
+        "description": "An episode entry within an alternate list",
+        "properties": {
+          "id": { "type": "integer" },
+          "url": { "type": "string", "format": "uri" },
+          "season": { "type": "integer", "nullable": true },
+          "number": { "type": "integer", "nullable": true },
+          "_links": {
+            "type": "object",
+            "properties": {
+              "self": { "$ref": "#/components/schemas/LinkObject" },
+              "allepisodes": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/LinkObject" }
+              }
+            }
+          }
+        }
+      },
+      "ShowSearchResult": {
+        "type": "object",
+        "description": "A show search result with relevance score",
+        "properties": {
+          "score": { "type": "number", "format": "float", "example": 1.4269742 },
+          "show": { "$ref": "#/components/schemas/Show" }
+        }
+      },
+      "PersonSearchResult": {
+        "type": "object",
+        "description": "A person search result with relevance score",
+        "properties": {
+          "score": { "type": "number", "format": "float" },
+          "person": { "$ref": "#/components/schemas/Person" }
+        }
+      },
+      "ScheduleEntry": {
+        "type": "object",
+        "description": "A scheduled episode — episode object with embedded show",
+        "allOf": [
+          { "$ref": "#/components/schemas/Episode" }
+        ],
+        "properties": {
+          "show": { "$ref": "#/components/schemas/Show" }
+        }
+      },
+      "UpdatesMap": {
+        "type": "object",
+        "description": "Map of entity ID (as string key) to Unix timestamp of last update",
+        "additionalProperties": {
+          "type": "integer",
+          "description": "Unix timestamp"
+        },
+        "example": {
+          "56": 1775933645,
+          "59": 1775926648
+        }
+      },
+      "LinkObject": {
+        "type": "object",
+        "properties": {
+          "href": { "type": "string", "format": "uri" }
+        }
+      },
+      "NamedLink": {
+        "type": "object",
+        "properties": {
+          "href": { "type": "string", "format": "uri" },
+          "name": { "type": "string" }
+        }
+      },
+      "ShowLinks": {
+        "type": "object",
+        "properties": {
+          "self": { "$ref": "#/components/schemas/LinkObject" },
+          "previousepisode": { "$ref": "#/components/schemas/NamedLink" },
+          "nextepisode": { "$ref": "#/components/schemas/NamedLink" }
+        }
+      },
+      "EpisodeLinks": {
+        "type": "object",
+        "properties": {
+          "self": { "$ref": "#/components/schemas/LinkObject" },
+          "show": { "$ref": "#/components/schemas/NamedLink" }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Search", "description": "Search for shows and people" },
+    { "name": "Schedule", "description": "TV and streaming schedules" },
+    { "name": "Shows", "description": "Show, season, cast, crew, and episode data" },
+    { "name": "Episodes", "description": "Individual episode data and guest credits" },
+    { "name": "People", "description": "Person profiles and credits" },
+    { "name": "Updates", "description": "Change tracking for shows and people" }
+  ]
+}
