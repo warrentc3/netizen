@@ -7,6 +7,8 @@
             "homelab"
         ],
         "endpoints": 129,
+        "spec_file": "technitium-dns-api_openapi-v3.0.3.json",
+        "spec_version": "3.0.3",
         "upstream": "https://github.com/TechnitiumSoftware/DnsServer",
         "site": "https://technitium.com/dns/"
     },
@@ -18,6 +20,8 @@
             "media"
         ],
         "endpoints": 31,
+        "spec_file": "tvmaze-api_openapi-v3.0.3.json",
+        "spec_version": "3.0.3",
         "upstream": null,
         "site": "https://www.tvmaze.com/api"
     }
