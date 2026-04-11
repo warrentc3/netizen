@@ -630,7 +630,7 @@
         const contents = await contentsRes.json();
         const catalog = catalogRes.ok ? await catalogRes.json() : {};
 
-        const dirs = contents.filter(e => e.type === 'dir' && !e.name.startsWith('.'));
+        const dirs = contents.filter(e => e.type === 'dir' && catalog[e.name]);
         if (!dirs.length) {
           el.innerHTML = '<div class="ghost-card">no specs yet</div>';
           return;
