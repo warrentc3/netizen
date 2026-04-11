@@ -17,9 +17,13 @@ jobs:
           failed=0
           catalog_keys=$(python3 -c "import json; d=json.load(open('catalog.json')); print('\n'.join(d.keys()))")
 
+          # Directories that are infrastructure, not spec dirs
+          skip_dirs=(".github" "scripts")
+
           for dir in */; do
             name="${dir%/}"
             [[ "$name" == .* ]] && continue
+            [[ " ${skip_dirs[*]} " == *" $name "* ]] && continue
 
             files=("$dir"*)
             count=${#files[@]}
