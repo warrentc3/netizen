@@ -1,0 +1,24 @@
+{
+    "technitium-dns": {
+        "name": "Technitium DNS Server",
+        "description": "Complete API coverage across zones, DHCP, settings, cache, apps, logging, and cluster management.",
+        "tags": [
+            "DNS",
+            "homelab"
+        ],
+        "endpoints": 129,
+        "upstream": "https://github.com/TechnitiumSoftware/DnsServer",
+        "site": "https://technitium.com/dns/"
+    },
+    "tvmaze": {
+        "name": "TVmaze",
+        "description": "Complete public API coverage across search, schedule, shows, episodes, people, and updates. Live-validated response shapes.",
+        "tags": [
+            "TV",
+            "media"
+        ],
+        "endpoints": 31,
+        "upstream": "https://github.com/tvmaze/api",
+        "site": "https://www.tvmaze.com/api"
+    }
+}

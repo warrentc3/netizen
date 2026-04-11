@@ -15,9 +15,9 @@ jobs:
       - name: Validate spec directory structure
         run: |
           failed=0
+          catalog_keys=$(python3 -c "import json; d=json.load(open('catalog.json')); print('\n'.join(d.keys()))")
 
           for dir in */; do
-            # Skip hidden directories and non-spec dirs
             name="${dir%/}"
             [[ "$name" == .* ]] && continue
 
@@ -45,13 +45,25 @@ jobs:
 
             if [[ $has_spec -eq 0 ]]; then
               echo "FAIL: $dir — missing *-api_openapi-v{version}.json"
-              for f in "${files[@]}"; do echo "  $f"; done
               failed=1
             fi
 
-            if [[ $has_index -eq 1 && $has_spec -eq 1 ]]; then
+            if ! echo "$catalog_keys" | grep -qx "$name"; then
+              echo "FAIL: $dir — no entry in catalog.json"
+              failed=1
+            fi
+
+            if [[ $has_index -eq 1 && $has_spec -eq 1 ]] && echo "$catalog_keys" | grep -qx "$name"; then
               echo "OK:   $dir"
             fi
           done
+
+          # Check for catalog entries with no corresponding directory
+          while IFS= read -r key; do
+            if [[ ! -d "$key" ]]; then
+              echo "FAIL: catalog.json entry '$key' has no corresponding directory"
+              failed=1
+            fi
+          done <<< "$catalog_keys"
 
           exit $failed
