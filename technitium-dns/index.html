@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Technitium DNS Server API</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+  <style>
+    body { margin: 0; padding: 0; }
+    #swagger-ui .topbar { background-color: #1a1a2e; }
+    #swagger-ui .topbar-wrapper img { display: none; }
+    #swagger-ui .topbar-wrapper::before {
+      content: "Technitium DNS Server API v14.3";
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 600;
+      padding-left: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function() {
+      SwaggerUIBundle({
+        url: "./technitium-dns-api_openapi-v3.0.3.json",
+        dom_id: "#swagger-ui",
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: "StandaloneLayout",
+        tryItOutEnabled: true,
+        persistAuthorization: true,
+        deepLinking: true,
+        displayRequestDuration: true,
+        defaultModelsExpandDepth: 1,
+        defaultModelExpandDepth: 2,
+        docExpansion: "list",
+        filter: true,
+        requestInterceptor: function(request) {
+          return request;
+        }
+      });
+    };
+  </script>
+</body>
+</html>
