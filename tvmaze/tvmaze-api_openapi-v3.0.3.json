@@ -3,7 +3,7 @@
   "info": {
     "title": "TVmaze API",
     "version": "unversioned",
-    "description": "TVmaze public API for show, episode, cast, schedule, and people data. No authentication required. Rate limit: 20 requests per 10 seconds per IP. All responses are JSON. CORS enabled.",
+    "description": "TVmaze public API for show, episode, cast, schedule, and people data. No authentication required. Rate limit: 20 requests per 10 seconds per IP. All responses are JSON. CORS enabled.\n\nThis OpenAPI document is community-generated from vendor documentation and observed behavior; TVmaze does not currently publish an official formal OpenAPI specification. Source docs: [TVmaze API](https://www.tvmaze.com/api).",
     "license": {
       "name": "CC BY-SA 4.0",
       "url": "https://creativecommons.org/licenses/by-sa/4.0/"
@@ -12,6 +12,11 @@
       "name": "TVmaze API Docs",
       "url": "https://www.tvmaze.com/api"
     }
+  },
+  "x-generated-from": {
+    "type": "vendor-docs-and-observed-behavior",
+    "source": "https://www.tvmaze.com/api",
+    "officialVendorOpenApiProvided": false
   },
   "servers": [
     { "url": "https://api.tvmaze.com" }
@@ -68,6 +73,7 @@
         "summary": "Lookup show by external ID",
         "operationId": "lookupShows",
         "tags": ["Search"],
+        "description": "Look up a single show by external ID. Provide exactly one of: tvrage, thetvdb, or imdb.",
         "parameters": [
           {
             "name": "tvrage",
@@ -850,7 +856,7 @@
         "in": "query",
         "required": false,
         "description": "ISO 3166-1 alpha-2 country code (e.g. US, GB, CA). Defaults to US.",
-        "schema": { "type": "string", "pattern": "^[A-Z]{2}$" }
+        "schema": { "type": "string", "pattern": "^[A-Z]{2}$", "default": "US" }
       },
       "since": {
         "name": "since",

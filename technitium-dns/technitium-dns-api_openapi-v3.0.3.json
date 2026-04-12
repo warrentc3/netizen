@@ -3,12 +3,25 @@
   "info": {
     "title": "Technitium DNS Server API",
     "version": "14.3",
-    "description": "HTTP API for Technitium DNS Server v14.3. All requests support GET or POST unless explicitly noted. POST requires Content-Type: application/x-www-form-urlencoded for form data, or multipart/form-data for file uploads. Authentication via non-expiring API token passed as ?token= query parameter."
+    "description": "HTTP API for Technitium DNS Server v14.3. All requests support GET or POST unless explicitly noted. POST requires Content-Type: application/x-www-form-urlencoded for form data, or multipart/form-data for file uploads. Authentication uses a non-expiring API token passed as ?token= query parameter. A token can be created via /api/user/createToken, and vendor guidance also documents additional token generation workflows ([point #1](https://blog.technitium.com/2023/03/how-to-auto-renew-ssl-certificates-with.html)).\n\nThis OpenAPI document is community-generated from vendor documentation and is not an official vendor-published OpenAPI spec. Source: [Technitium APIDOCS.md](https://github.com/TechnitiumSoftware/DnsServer/blob/master/APIDOCS.md)."
+  },
+  "x-generated-from": {
+    "type": "vendor-docs",
+    "source": "https://github.com/TechnitiumSoftware/DnsServer/blob/master/APIDOCS.md",
+    "officialVendorOpenApiProvided": false
   },
   "servers": [
     {
-      "url": "https://{host}",
+      "url": "{scheme}://{host}",
       "variables": {
+        "scheme": {
+          "default": "http",
+          "enum": [
+            "http",
+            "https"
+          ],
+          "description": "Protocol for the DNS server endpoint. Use http for local/offline access, or https when TLS is enabled."
+        },
         "host": {
           "default": "localhost:5380",
           "description": "DNS server host and port"
@@ -27,7 +40,7 @@
         "type": "apiKey",
         "in": "query",
         "name": "token",
-        "description": "Non-expiring API token created via /api/user/createToken"
+        "description": "Non-expiring API token (for example, generated via /api/user/createToken). Vendor guidance documents additional generation workflows ([point #1](https://blog.technitium.com/2023/03/how-to-auto-renew-ssl-certificates-with.html))."
       }
     },
     "schemas": {

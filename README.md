@@ -15,4 +15,9 @@ High-quality API specs and interactive Swagger UIs for tools that deserve better
 
 ## License
 
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — free to use and adapt with attribution.
+No-attribution model:
+
+- Code (site, scripts, workflows): [0BSD](LICENSE)
+- API specs and non-code content: [CC0 1.0](LICENSE-CONTENT)
+
+Use, copy, modify, and redistribute freely.

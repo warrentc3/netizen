@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   validate-structure:
     runs-on: ubuntu-latest
@@ -62,7 +65,67 @@ jobs:
             fi
           done
 
-          python3 scripts/validate-catalog.py
+          python3 scripts/validate-catalog.py || failed=1
+
+          if [[ $failed -ne 0 ]]; then
+            echo "Structure validation failed"
+            exit 1
+          fi
+
+      - name: Build ZIP bundles for all spec folders
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+          mapfile -t spec_dirs < <(python3 -c "import json; d=json.load(open('catalog.json')); print('\\n'.join(sorted(d.keys())))")
+
+          if [[ ${#spec_dirs[@]} -eq 0 ]]; then
+            echo "No spec folders found in catalog.json"
+            exit 1
+          fi
+
+          for folder in "${spec_dirs[@]}"; do
+            [[ -d "$folder" ]] || { echo "Missing directory: $folder"; exit 1; }
+            zip -r "dist/${folder//\//-}.zip" "$folder" > /dev/null
+            echo "Built dist/${folder//\//-}.zip"
+          done
+
+      - name: Upload ZIP artifacts for this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: spec-folder-zips-${{ github.run_id }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publish ZIPs to public release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          tag="spec-bundles-latest"
+          title="Spec Bundles (Latest)"
+          notes="Public ZIP bundles for individual spec folders. Assets are replaced in-place by workflow runs on main."
+
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" --title "$title" --notes "$notes"
+          fi
+
+          gh release upload "$tag" dist/*.zip --clobber
+
+      - name: Job summary
+        run: |
+          {
+            echo "## Spec Build Outputs"
+            echo
+            echo "- ZIPs generated: $(ls dist/*.zip | wc -l)"
+            echo "- Run artifact: spec-folder-zips-${{ github.run_id }}"
+            if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+              echo "- Public release: https://github.com/${{ github.repository }}/releases/tag/spec-bundles-latest"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # Enrich + commit-back deferred — revisit when bot-signed commits are sorted
       # - name: Enrich catalog.json with spec metadata

@@ -23,49 +23,89 @@
     }
 
     :root {
-      font-family: system-ui, -apple-system, sans-serif
+      --bg: #eef1f5;
+      --bg-accent: #e1e7ef;
+      --text: #1d232b;
+      --text-muted: #5f6976;
+      --border: rgba(44, 58, 77, 0.18);
+      --border-strong: rgba(44, 58, 77, 0.35);
+      --card-bg: rgba(255, 255, 255, 0.86);
+      --chip-bg: #e8edf3;
+      --chip-text: #4f5a67;
+      --chip-border: rgba(44, 58, 77, 0.12);
+      --action-hover: #e4eaf2;
+      --skeleton: #dfe5ee;
+      --footer-badge-bg: #e8edf3;
+      --footer-badge-text: #687385;
+      --shadow: 0 10px 28px rgba(31, 44, 60, 0.1);
+      --swagger-link: #2f8f4d;
+      --swagger-link-border: #8dd3a2;
+      --swagger-link-hover: #e4f4ea;
+      --page-font: "Segoe UI", "Aptos", "Trebuchet MS", system-ui, -apple-system, sans-serif;
+      --mono-font: "Cascadia Mono", "Consolas", "SFMono-Regular", "Liberation Mono", monospace;
     }
 
-    body {
-      background: #fff;
-      color: #111
-    }
-
-    [data-theme="dark"] body {
-      background: #111;
-      color: #f0f0f0
+    :root[data-theme="dark"] {
+      --bg: #090c11;
+      --bg-accent: #121821;
+      --text: #e6ebf1;
+      --text-muted: #a1adbc;
+      --border: rgba(184, 201, 223, 0.14);
+      --border-strong: rgba(184, 201, 223, 0.3);
+      --card-bg: rgba(18, 24, 33, 0.92);
+      --chip-bg: #18202a;
+      --chip-text: #bdc8d7;
+      --chip-border: rgba(184, 201, 223, 0.14);
+      --action-hover: #1d2733;
+      --skeleton: #151d28;
+      --footer-badge-bg: #18212c;
+      --footer-badge-text: #a8b5c6;
+      --shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
+      --swagger-link: #8ed8aa;
+      --swagger-link-border: #2f8f4d;
+      --swagger-link-hover: #1a3a25;
     }
 
     @media (prefers-color-scheme: dark) {
-      body {
-        background: #111;
-        color: #f0f0f0
+      :root:not([data-theme="light"]) {
+        --bg: #090c11;
+        --bg-accent: #121821;
+        --text: #e6ebf1;
+        --text-muted: #a1adbc;
+        --border: rgba(184, 201, 223, 0.14);
+        --border-strong: rgba(184, 201, 223, 0.3);
+        --card-bg: rgba(18, 24, 33, 0.92);
+        --chip-bg: #18202a;
+        --chip-text: #bdc8d7;
+        --chip-border: rgba(184, 201, 223, 0.14);
+        --action-hover: #1d2733;
+        --skeleton: #151d28;
+        --footer-badge-bg: #18212c;
+        --footer-badge-text: #a8b5c6;
+        --shadow: 0 10px 32px rgba(0, 0, 0, 0.35);
       }
     }
 
+    body {
+      font-family: var(--page-font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
     .wrap {
-      max-width: 700px;
+      max-width: 760px;
       margin: 0 auto;
       padding: 0 1.5rem 3rem
     }
 
     .site-header {
       padding: 2.5rem 0 2rem;
-      border-bottom: 0.5px solid rgba(0, 0, 0, 0.12);
+      border-bottom: 0.5px solid var(--border);
       margin-bottom: 2.5rem;
       display: flex;
       justify-content: space-between;
       align-items: flex-start
-    }
-
-    [data-theme="dark"] .site-header {
-      border-bottom-color: rgba(255, 255, 255, 0.12)
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .site-header {
-        border-bottom-color: rgba(255, 255, 255, 0.12)
-      }
     }
 
     .brand {
@@ -75,61 +115,36 @@
     }
 
     .wordmark {
-      font-size: 26px;
-      font-weight: 500;
-      letter-spacing: -0.5px;
+      font-size: 31px;
+      font-weight: 700;
+      letter-spacing: -0.04em;
       line-height: 1
     }
 
     .tagline {
       font-size: 13px;
-      color: #666;
+      color: var(--text-muted);
       margin-top: 6px
-    }
-
-    [data-theme="dark"] .tagline {
-      color: #999
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .tagline {
-        color: #999
-      }
     }
 
     .theme-btn {
       background: none;
-      border: 0.5px solid rgba(0, 0, 0, 0.2);
+      border: 0.5px solid var(--border);
       border-radius: 8px;
       padding: 5px 9px;
       cursor: pointer;
       font-size: 14px;
-      color: #666;
+      color: var(--text-muted);
       line-height: 1;
       flex-shrink: 0;
-      margin-top: 4px
+      margin-top: 4px;
+      transition: border-color 0.15s, color 0.15s, background-color 0.15s
     }
 
     .theme-btn:hover {
-      border-color: rgba(0, 0, 0, 0.4);
-      color: #111
-    }
-
-    [data-theme="dark"] .theme-btn {
-      border-color: rgba(255, 255, 255, 0.2);
-      color: #999
-    }
-
-    [data-theme="dark"] .theme-btn:hover {
-      border-color: rgba(255, 255, 255, 0.4);
-      color: #f0f0f0
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .theme-btn {
-        border-color: rgba(255, 255, 255, 0.2);
-        color: #999
-      }
+      border-color: var(--border-strong);
+      color: var(--text);
+      background: var(--action-hover)
     }
 
     .catalog-label {
@@ -137,13 +152,13 @@
       font-weight: 500;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #aaa;
+      color: var(--text-muted);
       margin-bottom: 1rem
     }
 
     .spec-card {
-      background: #fff;
-      border: 0.5px solid rgba(0, 0, 0, 0.12);
+      background: var(--card-bg);
+      border: 0.5px solid var(--border);
       border-radius: 12px;
       padding: 1.25rem 1.5rem;
       margin-bottom: 1rem;
@@ -152,33 +167,17 @@
       gap: 1rem;
       align-items: start;
       cursor: pointer;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, transform 0.2s, box-shadow 0.2s;
       text-decoration: none;
-      color: inherit
+      color: inherit;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px)
     }
 
     .spec-card:hover {
-      border-color: rgba(0, 0, 0, 0.35)
-    }
-
-    [data-theme="dark"] .spec-card {
-      background: #1a1a1a;
-      border-color: rgba(255, 255, 255, 0.1)
-    }
-
-    [data-theme="dark"] .spec-card:hover {
-      border-color: rgba(255, 255, 255, 0.3)
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .spec-card {
-        background: #1a1a1a;
-        border-color: rgba(255, 255, 255, 0.1)
-      }
-
-      .spec-card:hover {
-        border-color: rgba(255, 255, 255, 0.3)
-      }
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.15)
     }
 
     .spec-name {
@@ -189,19 +188,9 @@
 
     .spec-desc {
       font-size: 13px;
-      color: #666;
+      color: var(--text-muted);
       line-height: 1.6;
       margin-bottom: 14px
-    }
-
-    [data-theme="dark"] .spec-desc {
-      color: #999
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .spec-desc {
-        color: #999
-      }
     }
 
     .chips {
@@ -212,26 +201,12 @@
 
     .chip {
       font-size: 11px;
-      font-family: ui-monospace, monospace;
+      font-family: var(--mono-font);
       padding: 3px 8px;
       border-radius: 4px;
-      background: #f4f4f4;
-      color: #666;
-      border: 0.5px solid rgba(0, 0, 0, 0.1)
-    }
-
-    [data-theme="dark"] .chip {
-      background: #222;
-      color: #999;
-      border-color: rgba(255, 255, 255, 0.1)
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .chip {
-        background: #222;
-        color: #999;
-        border-color: rgba(255, 255, 255, 0.1)
-      }
+      background: var(--chip-bg);
+      color: var(--chip-text);
+      border: 0.5px solid var(--chip-border)
     }
 
     .chip-green {
@@ -252,38 +227,38 @@
       border-color: #FAC775
     }
 
-    [data-theme="dark"] .chip-green {
+    :root[data-theme="dark"] .chip-green {
       background: #27500A;
       color: #C0DD97;
       border-color: #3B6D11
     }
 
-    [data-theme="dark"] .chip-blue {
+    :root[data-theme="dark"] .chip-blue {
       background: #0C447C;
       color: #B5D4F4;
       border-color: #185FA5
     }
 
-    [data-theme="dark"] .chip-amber {
+    :root[data-theme="dark"] .chip-amber {
       background: #633806;
       color: #FAC775;
       border-color: #854F0B
     }
 
     @media (prefers-color-scheme: dark) {
-      .chip-green {
+      :root:not([data-theme="light"]) .chip-green {
         background: #27500A;
         color: #C0DD97;
         border-color: #3B6D11
       }
 
-      .chip-blue {
+      :root:not([data-theme="light"]) .chip-blue {
         background: #0C447C;
         color: #B5D4F4;
         border-color: #185FA5
       }
 
-      .chip-amber {
+      :root:not([data-theme="light"]) .chip-amber {
         background: #633806;
         color: #FAC775;
         border-color: #854F0B
@@ -300,110 +275,53 @@
 
     .action-link {
       font-size: 12px;
-      color: #666;
+      color: var(--text-muted);
       text-decoration: none;
       padding: 4px 8px;
       border-radius: 8px;
-      display: block
+      display: block;
+      transition: background-color 0.15s, color 0.15s
     }
 
     .action-link:hover {
-      background: #f4f4f4;
-      color: #111
-    }
-
-    [data-theme="dark"] .action-link {
-      color: #999
-    }
-
-    [data-theme="dark"] .action-link:hover {
-      background: #222;
-      color: #f0f0f0
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .action-link {
-        color: #999
-      }
-
-      .action-link:hover {
-        background: #222
-      }
+      background: var(--action-hover);
+      color: var(--text)
     }
 
     .action-link-primary {
       font-size: 12px;
       font-weight: 500;
-      color: #185FA5;
+      color: var(--swagger-link);
       text-decoration: none;
       padding: 4px 8px;
-      border: 0.5px solid #B5D4F4;
+      border: 0.5px solid var(--swagger-link-border);
       border-radius: 8px;
-      display: block
+      display: block;
+      transition: background-color 0.15s, color 0.15s
     }
 
     .action-link-primary:hover {
-      background: #E6F1FB
-    }
-
-    [data-theme="dark"] .action-link-primary {
-      color: #B5D4F4;
-      border-color: #185FA5
-    }
-
-    [data-theme="dark"] .action-link-primary:hover {
-      background: #0C447C
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .action-link-primary {
-        color: #B5D4F4;
-        border-color: #185FA5
-      }
-
-      .action-link-primary:hover {
-        background: #0C447C
-      }
+      background: var(--swagger-link-hover)
     }
 
     .ghost-card {
-      border: 0.5px dashed rgba(0, 0, 0, 0.15);
+      border: 0.5px dashed var(--border);
       border-radius: 12px;
       padding: 1.25rem 1.5rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #aaa;
+      color: var(--text-muted);
       font-size: 13px;
       min-height: 90px
     }
 
-    [data-theme="dark"] .ghost-card {
-      border-color: rgba(255, 255, 255, 0.12)
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .ghost-card {
-        border-color: rgba(255, 255, 255, 0.12)
-      }
-    }
-
     .skeleton {
-      background: #f4f4f4;
+      background: var(--skeleton);
       border-radius: 12px;
       height: 130px;
       margin-bottom: 1rem;
       animation: pulse 1.4s ease-in-out infinite
-    }
-
-    [data-theme="dark"] .skeleton {
-      background: #1e1e1e
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .skeleton {
-        background: #1e1e1e
-      }
     }
 
     @keyframes pulse {
@@ -421,52 +339,38 @@
     .site-footer {
       margin-top: 3rem;
       padding-top: 1.5rem;
-      border-top: 0.5px solid rgba(0, 0, 0, 0.1);
+      border-top: 0.5px solid var(--border);
       display: flex;
       justify-content: space-between;
-      align-items: center
-    }
-
-    [data-theme="dark"] .site-footer {
-      border-top-color: rgba(255, 255, 255, 0.1)
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .site-footer {
-        border-top-color: rgba(255, 255, 255, 0.1)
-      }
+      align-items: center;
+      gap: 12px
     }
 
     .footer-link {
       font-size: 12px;
-      color: #aaa;
+      color: var(--text-muted);
       text-decoration: none
     }
 
     .footer-link:hover {
-      color: #666
+      color: var(--text)
     }
 
     .footer-badge {
       font-size: 11px;
-      font-family: ui-monospace, monospace;
+      font-family: var(--mono-font);
       padding: 3px 10px;
       border-radius: 4px;
-      background: #f4f4f4;
-      color: #aaa;
-      border: 0.5px solid rgba(0, 0, 0, 0.1)
+      background: var(--footer-badge-bg);
+      color: var(--footer-badge-text);
+      border: 0.5px solid var(--chip-border);
+      text-decoration: none;
+      display: inline-block
     }
 
-    [data-theme="dark"] .footer-badge {
-      background: #222;
-      border-color: rgba(255, 255, 255, 0.1)
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .footer-badge {
-        background: #222;
-        border-color: rgba(255, 255, 255, 0.1)
-      }
+    .footer-badge:hover {
+      color: var(--text);
+      border-color: var(--border-strong)
     }
 
     .mc {
@@ -477,29 +381,57 @@
       fill: #D85A30
     }
 
-    [data-theme="dark"] .mc {
+    :root[data-theme="dark"] .mc {
       fill: #AFA9EC
     }
 
-    [data-theme="dark"] .mr {
+    :root[data-theme="dark"] .mr {
       fill: #F0997B
     }
 
     @media (prefers-color-scheme: dark) {
-      .mc {
+      :root:not([data-theme="light"]) .mc {
         fill: #AFA9EC
       }
 
-      .mr {
+      :root:not([data-theme="light"]) .mr {
         fill: #F0997B
       }
     }
 
     .error-msg {
       font-size: 13px;
-      color: #aaa;
+      color: var(--text-muted);
       text-align: center;
       padding: 2rem 0
+    }
+
+    @media (max-width: 640px) {
+      .site-header {
+        padding: 1.75rem 0 1.5rem;
+        margin-bottom: 1.75rem;
+      }
+
+      .wordmark {
+        font-size: 28px;
+      }
+
+      .spec-card {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 1rem 1rem 1.1rem;
+      }
+
+      .spec-actions {
+        align-items: flex-start;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .site-footer {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
@@ -543,13 +475,44 @@
 
     <footer class="site-footer">
       <a class="footer-link" href="https://github.com/warrentc3/netizen">github.com/warrentc3/netizen</a>
-      <span class="footer-badge">CC licensed</span>
+      <a class="footer-badge" href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0 Universal (CC0 1.0) Public Domain Dedication</a>
     </footer>
   </div>
 
   <script>
-    const RAW = 'https://raw.githubusercontent.com/warrentc3/netizen/main';
     const el = document.getElementById('catalog');
+
+    function getAppRootPath() {
+      const url = new URL(window.location.href);
+      const last = url.pathname.split('/').pop() || '';
+      const isFilePath = last.includes('.');
+
+      if (!url.pathname.endsWith('/') && !isFilePath) {
+        url.pathname = `${url.pathname}/`;
+      }
+
+      return new URL('.', url).pathname;
+    }
+
+    function joinAppPath(root, segment) {
+      const left = root.endsWith('/') ? root.slice(0, -1) : root;
+      const right = segment.startsWith('/') ? segment.slice(1) : segment;
+      return `${left}/${right}`;
+    }
+
+    function getReleaseBaseUrl() {
+      const host = window.location.hostname;
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      if (host.endsWith('.github.io') && pathParts.length >= 1) {
+        const owner = host.slice(0, -10);
+        const repo = pathParts[0];
+        return `https://github.com/${owner}/${repo}/releases/download/spec-bundles-latest`;
+      }
+      return 'https://github.com/warrentc3/netizen/releases/download/spec-bundles-latest';
+    }
+
+    const appRootPath = getAppRootPath();
+    const releaseBaseUrl = getReleaseBaseUrl();
 
     // Theme toggle
     const modes = ['system', 'dark', 'light'], icons = { system: '⊙', dark: '☽', light: '☀' };
@@ -571,44 +534,44 @@
     });
 
     function renderCard(folder, meta = {}) {
-      const base = `https://warrentc3.github.io/netizen/${folder}`;
+      const base = joinAppPath(appRootPath, folder);
       const name = meta.name || folder;
       const desc = meta.description || '';
       const tags = meta.tags || [];
       const swagger = meta.spec_file || null;
-      const version = meta.spec_version ? `v${meta.spec_version}` : null;
-      const format = meta.spec_version ? `OpenAPI ${meta.spec_version}` : null;
+      const zipName = `${folder.replace(/\//g, '-')}.zip`;
+      const zipUrl = `${releaseBaseUrl}/${zipName}`;
 
       const actions = [
-        `<a class="action-link-primary" href="${base}/" onclick="event.stopPropagation()">Swagger UI ↗</a>`,
-        swagger ? `<a class="action-link" href="${base}/${swagger}" onclick="event.stopPropagation()">JSON spec ↗</a>` : '',
-        meta.upstream ? `<a class="action-link" href="${meta.upstream}" onclick="event.stopPropagation()">GitHub ↗</a>` : '',
-        meta.site ? `<a class="action-link" href="${meta.site}" onclick="event.stopPropagation()">Website ↗</a>` : '',
+        `<a class="action-link" href="${zipUrl}">Download ZIP ↗</a>`,
+        `<a class="action-link-primary" href="${base}/">Swagger UI ↗</a>`,
+        swagger ? `<a class="action-link" href="${base}/${swagger}">JSON spec ↗</a>` : '',
+        meta.upstream ? `<a class="action-link" href="${meta.upstream}">GitHub ↗</a>` : '',
+        meta.site ? `<a class="action-link" href="${meta.site}">Website ↗</a>` : '',
       ].filter(Boolean).join('');
 
       const chips = [
-        version ? `<span class="chip chip-green">${version}</span>` : '',
-        format ? `<span class="chip chip-blue">${format}</span>` : '',
         ...tags.map(t => `<span class="chip">${t}</span>`),
         meta.endpoints ? `<span class="chip chip-amber">${meta.endpoints} endpoints</span>` : '',
       ].filter(Boolean).join('');
 
       return `
-      <a class="spec-card" href="${base}/">
+      <article class="spec-card" data-href="${base}/" role="link" tabindex="0" aria-label="${name} API spec">
         <div>
           <div class="spec-name">${name}</div>
           ${desc ? `<p class="spec-desc">${desc}</p>` : ''}
           <div class="chips">${chips}</div>
         </div>
         <div class="spec-actions">${actions}</div>
-      </a>`;
+      </article>`;
     }
 
-    // catalog.json is authored and CI-enriched by the repo maintainer — content is trusted
+    // catalog.json content is trusted and rendered directly into cards
     async function loadCatalog() {
       el.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>'; // safe static markup
       try {
-        const res = await fetch(`${RAW}/catalog.json`);
+        // const res = await fetch('https://raw.githubusercontent.com/warrentc3/netizen/main/catalog.json');
+        const res = await fetch('./catalog.json', { cache: 'force-cache' });
         if (!res.ok) throw new Error('catalog fetch failed');
         const catalog = await res.json();
 
@@ -619,11 +582,29 @@
         }
 
         const cards = entries.map(([key, meta]) => renderCard(key, meta));
-        el.innerHTML = cards.join('') + '<div class="ghost-card">+ more specs on the way</div>'; // safe — renderCard output is template-controlled
+        el.innerHTML = cards.join(''); // safe — renderCard output is template-controlled
       } catch (e) {
         el.innerHTML = '<p class="error-msg">Could not load catalog — check back soon.</p>'; // safe static markup
       }
     }
+
+    // Make the whole card clickable without nesting links inside links.
+    el.addEventListener('click', (event) => {
+      const card = event.target.closest('.spec-card');
+      if (!card || event.target.closest('a')) return;
+      const href = card.dataset.href;
+      if (href) window.location.href = href;
+    });
+
+    el.addEventListener('keydown', (event) => {
+      const card = event.target.closest('.spec-card');
+      if (!card) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        const href = card.dataset.href;
+        if (href) window.location.href = href;
+      }
+    });
 
     loadCatalog();
   </script>
