@@ -3,8 +3,28 @@ name: Spec Directory Structure
 on:
   push:
     branches: [main]
+    paths:
+      - "catalog.json"
+      - "index.html"
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "*/index.html"
+      - "*-*/**/*-api_openapi-v*.json"
+      - "*/*-api_openapi-v*.json"
   pull_request:
     branches: [main]
+    paths:
+      - "catalog.json"
+      - "index.html"
+      - "scripts/**"
+      - ".github/workflows/**"
+      - "*/index.html"
+      - "*-*/**/*-api_openapi-v*.json"
+      - "*/*-api_openapi-v*.json"
+
+concurrency:
+  group: spec-structure-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
