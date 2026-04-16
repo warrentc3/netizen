@@ -127,13 +127,16 @@ jobs:
 
           tag="spec-bundles-latest"
           title="Spec Bundles (Latest)"
-          notes="Public ZIP bundles for individual spec folders. Assets are replaced in-place by workflow runs on main."
+          timestamp=$(date -u +"%Y-%m-%d %H:%M UTC")
+          notes="Public ZIP bundles for individual spec folders. Last updated: ${timestamp}."
 
-          if ! gh release view "$tag" > /dev/null 2>&1; then
-            gh release create "$tag" --title "$title" --notes "$notes"
+          # Delete and recreate to reset the release timestamp
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release delete "$tag" --yes
+            git push --delete origin "$tag" 2>/dev/null || true
           fi
 
-          gh release upload "$tag" dist/*.zip --clobber
+          gh release create "$tag" --title "$title" --notes "$notes" dist/*.zip
 
       - name: Job summary
         run: |
