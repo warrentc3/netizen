@@ -22,8 +22,8 @@
         "endpoints": 31,
         "spec_file": "tvmaze-api_openapi-v3.0.3.json",
         "spec_version": "3.0.3",
-        "upstream": null,
-        "site": "https://www.tvmaze.com/api"
+        "upstream": "https://www.tvmaze.com/api",
+        "site": "https://www.tvmaze.com"
     },
     "schedulesdirect": {
         "name": "Schedules Direct",
