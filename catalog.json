@@ -25,6 +25,19 @@
         "upstream": "https://www.tvmaze.com/api",
         "site": "https://www.tvmaze.com"
     },
+    "omdb": {
+        "name": "OMDb",
+        "description": "RESTful web service for movie, series, and episode metadata sourced from IMDb. Single-endpoint query-parameter API with API key authentication.",
+        "tags": [
+            "movies",
+            "media"
+        ],
+        "endpoints": 1,
+        "spec_file": "omdb-api_openapi-v3.0.0.json",
+        "spec_version": "3.0.0",
+        "upstream": "https://www.omdbapi.com/swagger.json",
+        "site": "https://www.omdbapi.com"
+    },
     "schedulesdirect": {
         "name": "Schedules Direct",
         "description": "Nonprofit TV listings and EPG data service providing lineups, schedules, program metadata, images, and celebrity data via JSON API.",

@@ -12,6 +12,7 @@ High-quality API specs and interactive Swagger UIs for tools that deserve better
 |------|---------|-----------|
 | [Technitium DNS Server](https://warrentc3.github.io/netizen/technitium-dns/) | 14.3 | 129 |
 | [TVmaze API](https://warrentc3.github.io/netizen/tvmaze/) | unversioned | 31 |
+| [OMDb](https://warrentc3.github.io/netizen/omdb/) | 1.0 | 1 |
 | [Schedules Direct](https://warrentc3.github.io/netizen/schedulesdirect/) | 20141201 | 25 |
 
 ## Local Usage

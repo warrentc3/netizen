@@ -1,0 +1,687 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "OMDb API",
+    "version": "1.0",
+    "description": "RESTful web service to obtain movie information. All content and images contributed and maintained by users. Tiered service via Patreon sponsorship — free tier provides metadata lookups, poster API (img.omdbapi.com) requires paid tier. This spec was rationalized from the official Swagger 2.0 (which had no response schemas), the omdbapi.com docs page, 176+ sample responses (112 movie, 11 series, 29 episode, 38 season, 21 search), and GitHub issue analysis. Response schemas are sample-derived, not vendor-documented. This spec covers JSON responses only — the API also supports XML (r=xml) but that format uses a fundamentally different structure (see x-omdb-quirks).",
+    "termsOfService": "http://omdbapi.com/legal.htm",
+    "contact": {
+      "email": "bfritz@fadingsignal.com"
+    },
+    "license": {
+      "name": "CC BY-NC 4.0",
+      "url": "https://creativecommons.org/licenses/by-nc/4.0/"
+    },
+    "x-source-swagger": "https://www.omdbapi.com/swagger.json"
+  },
+  "servers": [
+    {
+      "url": "https://www.omdbapi.com",
+      "description": "Metadata API"
+    }
+  ],
+  "security": [
+    {
+      "apiKey": []
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Query the OMDb API by title, ID, or search string",
+        "description": "Single endpoint with query-parameter-based routing. Exactly one of t, i, or s must be provided. The response shape depends on which parameter is used and, for the i parameter, whether a Season parameter is also provided. When i is combined with Season, the response is a season episode listing (completely different shape). The type parameter filters results but also affects which response shape is returned.",
+        "operationId": "query",
+        "parameters": [
+          { "$ref": "#/components/parameters/t" },
+          { "$ref": "#/components/parameters/i" },
+          { "$ref": "#/components/parameters/s" },
+          { "$ref": "#/components/parameters/type" },
+          { "$ref": "#/components/parameters/y" },
+          { "$ref": "#/components/parameters/plot" },
+          { "$ref": "#/components/parameters/Season" },
+          { "$ref": "#/components/parameters/Episode" },
+          { "$ref": "#/components/parameters/page" },
+          { "$ref": "#/components/parameters/callback" },
+          { "$ref": "#/components/parameters/v" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response shape varies by query mode: t or i without Season returns a title response (MovieResponse, SeriesResponse, or EpisodeResponse based on the Type field). i with Season returns a SeasonResponse. s returns a SearchResponse. All modes can return ErrorResponse on failure. When type param is omitted, OMDb picks the best match and the result type may differ from expectation (see GitHub issue #285).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/MovieResponse" },
+                    { "$ref": "#/components/schemas/SeriesResponse" },
+                    { "$ref": "#/components/schemas/EpisodeResponse" },
+                    { "$ref": "#/components/schemas/SeasonResponse" },
+                    { "$ref": "#/components/schemas/SearchResponse" },
+                    { "$ref": "#/components/schemas/ErrorResponse" }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated — invalid or missing API key"
+          }
+        }
+      }
+    }
+  },
+  "x-omdb-poster-api": {
+    "url": "https://img.omdbapi.com",
+    "description": "Poster image API. Separate host from the metadata API. Takes the same apikey query parameter plus i (IMDb ID). Returns image/jpeg on success (200), 404 on not-found. Patreon tiers claim this requires Standard ($5/mo) or above, but empirical testing (April 2026) confirms free-tier keys also receive 200 image/jpeg responses — tier restriction appears unenforced. 24hr Cloudflare cache (Cache-Control: public, max-age=86400). ASP.NET 4.0 backend. CORS: *. No rate-limit or tier headers in response. Poster URLs in metadata responses may return 404 from this API (GitHub issue #308).",
+    "example_url": "https://img.omdbapi.com/?apikey=[yourkey]&i=tt0111161",
+    "patreon_tiers": {
+      "free": { "price": "$0/mo", "daily_limit": 1000, "poster_access_advertised": false, "poster_access_actual": true },
+      "basic": { "price": "$1/mo", "daily_limit": 100000, "poster_access_advertised": false, "poster_access_actual": "untested" },
+      "standard": { "price": "$5/mo", "daily_limit": 250000, "poster_access_advertised": true, "poster_access_actual": true },
+      "pro": { "price": "$10/mo", "daily_limit": "unlimited", "poster_access_advertised": true, "poster_access_actual": true },
+      "sponsor": { "price": "$25/mo", "daily_limit": "unlimited", "poster_access_advertised": true, "poster_access_actual": true, "note": "Includes homepage credit, limited to 25 slots" }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "name": "apikey",
+        "in": "query"
+      }
+    },
+    "parameters": {
+      "t": {
+        "name": "t",
+        "in": "query",
+        "description": "Title of movie or series. Mutually exclusive with i and s — exactly one of the three must be provided.",
+        "required": false,
+        "schema": { "type": "string" }
+      },
+      "i": {
+        "name": "i",
+        "in": "query",
+        "description": "A valid IMDb ID (e.g. tt0000001). Supports 7-8 digit IDs. Mutually exclusive with t and s. Can be combined with Season and Episode parameters.",
+        "required": false,
+        "schema": { "type": "string", "pattern": "^tt\\d{7,8}$" }
+      },
+      "s": {
+        "name": "s",
+        "in": "query",
+        "description": "Title to search for. Returns paginated results. Mutually exclusive with t and i.",
+        "required": false,
+        "schema": { "type": "string" }
+      },
+      "type": {
+        "name": "type",
+        "in": "query",
+        "description": "Result type filter. The official Swagger only lists 'movie' and 'series'. The API also accepts 'episode' and 'game' (IMDb tracks video games).",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["movie", "series", "episode", "game"]
+        }
+      },
+      "y": {
+        "name": "y",
+        "in": "query",
+        "description": "Year of release",
+        "required": false,
+        "schema": { "type": "integer" }
+      },
+      "plot": {
+        "name": "plot",
+        "in": "query",
+        "description": "Return short or full plot. Short plots truncate at ~233 characters with '...' suffix.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["short", "full"],
+          "default": "short"
+        }
+      },
+      "page": {
+        "name": "page",
+        "in": "query",
+        "description": "Page number for search results. Only applicable with s parameter.",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 1
+        }
+      },
+      "Season": {
+        "name": "Season",
+        "in": "query",
+        "description": "Season number. When provided with an IMDb series ID via the i parameter, returns a season episode listing instead of the title response. Not documented in the official Swagger.",
+        "required": false,
+        "schema": { "type": "integer", "minimum": 1 }
+      },
+      "Episode": {
+        "name": "Episode",
+        "in": "query",
+        "description": "Episode number within the season. Used in combination with Season parameter. Not documented in the official Swagger.",
+        "required": false,
+        "schema": { "type": "integer", "minimum": 1 }
+      },
+      "callback": {
+        "name": "callback",
+        "in": "query",
+        "description": "JSONP callback function name. When provided, the response is wrapped in a JavaScript function call rather than returning raw JSON. JSONP responses fall outside the JSON schemas defined in this spec.",
+        "required": false,
+        "schema": { "type": "string" }
+      },
+      "v": {
+        "name": "v",
+        "in": "query",
+        "description": "API version (reserved, currently only v1)",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "default": 1
+        }
+      }
+    },
+    "schemas": {
+      "NullableString": {
+        "type": "string",
+        "description": "OMDb uses the string \"N/A\" as a null sentinel. JSON null is never returned. All fields that can be absent use this convention."
+      },
+      "RatingEntry": {
+        "type": "object",
+        "description": "A single rating from an external source. Three sources observed: Internet Movie Database (format: N.N/10), Rotten Tomatoes (format: NN%), Metacritic (format: NN/100). IMDB is always present for rated titles. RT and Metacritic appear primarily on movies.",
+        "properties": {
+          "Source": {
+            "type": "string",
+            "enum": ["Internet Movie Database", "Rotten Tomatoes", "Metacritic"]
+          },
+          "Value": {
+            "type": "string",
+            "description": "Rating value. Format varies by source: 'N.N/10' (IMDB), 'NN%' (RT), 'NN/100' (Metacritic)."
+          }
+        },
+        "required": ["Source", "Value"]
+      },
+      "MovieResponse": {
+        "type": "object",
+        "description": "Full movie detail response. 25 fields, all always present. All values are strings except Ratings (array). Three fields are effectively deprecated: Website (100% N/A), Production (95.5% N/A), DVD (96.4% N/A). Numeric values (year, runtime, votes, ratings, box office) are all string-encoded. Comma-separated lists are used for multi-value fields (Genre, Director, Writer, Actors, Language, Country) — these are not JSON arrays.",
+        "properties": {
+          "Title": {
+            "type": "string",
+            "description": "Movie title."
+          },
+          "Year": {
+            "type": "string",
+            "description": "Release year as a 4-digit string. E.g. '1994'."
+          },
+          "Rated": {
+            "type": "string",
+            "description": "Content rating. Observed values: R, PG-13, PG, Not Rated, TV-MA, or N/A."
+          },
+          "Released": {
+            "type": "string",
+            "description": "Release date in 'DD Mon YYYY' format. E.g. '14 Oct 1994'. Can be N/A."
+          },
+          "Runtime": {
+            "type": "string",
+            "description": "Runtime as 'NNN min' string. E.g. '142 min'. Can be N/A."
+          },
+          "Genre": {
+            "type": "string",
+            "description": "Comma-separated genre list. E.g. 'Action, Adventure, Comedy'."
+          },
+          "Director": {
+            "type": "string",
+            "description": "Comma-separated director name(s). E.g. 'Tim Burton, Mike Johnson'."
+          },
+          "Writer": {
+            "type": "string",
+            "description": "Comma-separated writer name(s). May include role annotations in parentheses. E.g. 'Stephen King, Frank Darabont'."
+          },
+          "Actors": {
+            "type": "string",
+            "description": "Comma-separated actor names, typically 3. E.g. 'Tim Robbins, Morgan Freeman, Bob Gunton'."
+          },
+          "Plot": {
+            "type": "string",
+            "description": "Synopsis text. Short plots truncate at ~233 chars with '...' suffix. Full plots available via plot=full parameter."
+          },
+          "Language": {
+            "type": "string",
+            "description": "Comma-separated language list. E.g. 'English, Spanish'. Known data quality issue: some values have trailing whitespace (e.g. 'American Sign ')."
+          },
+          "Country": {
+            "type": "string",
+            "description": "Comma-separated country names (not ISO codes). E.g. 'United States, Canada'. Both 'United States' and 'USA' appear as distinct values."
+          },
+          "Awards": {
+            "type": "string",
+            "description": "Semi-structured awards text. E.g. 'Won 3 Oscars. 23 wins & 23 nominations total'. Can be N/A. Known data quality issue: some entries have missing spaces/periods (e.g. BAFTA entries)."
+          },
+          "Poster": {
+            "type": "string",
+            "description": "URL to poster image at m.media-amazon.com, 300px wide (_V1_SX300.jpg). Can be N/A."
+          },
+          "Ratings": {
+            "type": "array",
+            "description": "External ratings. 1-3 entries for movies. IMDB always present for rated titles. Empty array [] when no ratings exist (the only field that uses [] instead of N/A for missing data).",
+            "items": { "$ref": "#/components/schemas/RatingEntry" }
+          },
+          "Metascore": {
+            "type": "string",
+            "description": "Metacritic score as a numeric string. E.g. '82'. Redundant with the Metacritic entry in Ratings array (same value, different format). Can be N/A."
+          },
+          "imdbRating": {
+            "type": "string",
+            "description": "IMDb rating as decimal string with one decimal place. E.g. '8.1'. Redundant with the IMDB entry in Ratings array. Can be N/A."
+          },
+          "imdbVotes": {
+            "type": "string",
+            "description": "Vote count as comma-formatted integer string. E.g. '683,546'. Must strip commas before parsing. Can be N/A."
+          },
+          "imdbID": {
+            "type": "string",
+            "description": "IMDb title ID. Format: tt + 7-8 digits. E.g. 'tt0075148'.",
+            "pattern": "^tt\\d{7,8}$"
+          },
+          "Type": {
+            "type": "string",
+            "description": "Always 'movie' for this response shape.",
+            "enum": ["movie"]
+          },
+          "DVD": {
+            "type": "string",
+            "description": "DVD release date in 'DD Mon YYYY' format. EFFECTIVELY DEPRECATED: 96.4% N/A in sample data.",
+            "deprecated": true
+          },
+          "BoxOffice": {
+            "type": "string",
+            "description": "US box office gross as dollar-formatted string. E.g. '$117,235,147'. Can be N/A for non-theatrical releases."
+          },
+          "Production": {
+            "type": "string",
+            "description": "Production company name(s). EFFECTIVELY DEPRECATED: 95.5% N/A in sample data.",
+            "deprecated": true
+          },
+          "Website": {
+            "type": "string",
+            "description": "Official website URL. FULLY DEPRECATED: 100% N/A in sample data.",
+            "deprecated": true
+          },
+          "Response": {
+            "type": "string",
+            "description": "Success indicator. Always 'True' (string, not boolean) for successful responses.",
+            "enum": ["True"]
+          }
+        },
+        "required": [
+          "Title", "Year", "Rated", "Released", "Runtime", "Genre", "Director",
+          "Writer", "Actors", "Plot", "Language", "Country", "Awards", "Poster",
+          "Ratings", "Metascore", "imdbRating", "imdbVotes", "imdbID", "Type",
+          "DVD", "BoxOffice", "Production", "Website", "Response"
+        ]
+      },
+      "SeriesResponse": {
+        "type": "object",
+        "description": "Full series detail response. 22 fields, all always present. Differs from MovieResponse: no DVD, BoxOffice, Production, Website; adds totalSeasons. Director and Metascore are always N/A at the series level. Year uses en-dash (U+2013) for ranges.",
+        "properties": {
+          "Title": {
+            "type": "string",
+            "description": "Series title."
+          },
+          "Year": {
+            "type": "string",
+            "description": "Year range as string using en-dash (U+2013, not hyphen U+002D). Ongoing series end with the en-dash (e.g. '2005\u2013'). Ended series show both years (e.g. '2008\u20132013'). Parsers splitting on hyphen U+002D will fail."
+          },
+          "Rated": {
+            "type": "string",
+            "description": "TV content rating. Observed values: TV-Y, TV-14, TV-MA. Can be N/A."
+          },
+          "Released": {
+            "type": "string",
+            "description": "Premiere date in 'DD Mon YYYY' format. E.g. '22 Sep 2005'."
+          },
+          "Runtime": {
+            "type": "string",
+            "description": "Episode runtime as 'NN min' string. Known data quality issue: The Last of Us returns '18S min' (non-numeric character). Can be N/A."
+          },
+          "Genre": {
+            "type": "string",
+            "description": "Comma-separated genre list."
+          },
+          "Director": {
+            "type": "string",
+            "description": "Always 'N/A' for series-level responses. Meaningful only for movie/episode queries."
+          },
+          "Writer": {
+            "type": "string",
+            "description": "Show creator(s), comma-separated."
+          },
+          "Actors": {
+            "type": "string",
+            "description": "Comma-separated actor names, typically 3. May contain non-ASCII characters."
+          },
+          "Plot": {
+            "type": "string",
+            "description": "Series synopsis. May be truncated with '...' suffix. Can contain escaped quotes."
+          },
+          "Language": {
+            "type": "string",
+            "description": "Comma-separated language list. Known data quality issue: trailing whitespace on some values (e.g. 'German Sign ')."
+          },
+          "Country": {
+            "type": "string",
+            "description": "Comma-separated country names."
+          },
+          "Awards": {
+            "type": "string",
+            "description": "Semi-structured awards text. Can be N/A."
+          },
+          "Poster": {
+            "type": "string",
+            "description": "URL to poster image. Can be N/A."
+          },
+          "Ratings": {
+            "type": "array",
+            "description": "External ratings. Typically 1 entry (IMDB only) for series. Breaking Bad had 2 (IMDB + RT). Empty array when no ratings.",
+            "items": { "$ref": "#/components/schemas/RatingEntry" }
+          },
+          "Metascore": {
+            "type": "string",
+            "description": "Always 'N/A' for series-level responses. Metacritic does not score at this level."
+          },
+          "imdbRating": {
+            "type": "string",
+            "description": "IMDb rating as decimal string. E.g. '9.5'."
+          },
+          "imdbVotes": {
+            "type": "string",
+            "description": "Vote count as comma-formatted integer string."
+          },
+          "imdbID": {
+            "type": "string",
+            "description": "IMDb title ID.",
+            "pattern": "^tt\\d{7,8}$"
+          },
+          "Type": {
+            "type": "string",
+            "description": "Always 'series' for this response shape.",
+            "enum": ["series"]
+          },
+          "totalSeasons": {
+            "type": "string",
+            "description": "Total season count as numeric string. E.g. '5'. Note: camelCase, unlike most OMDb fields which are PascalCase."
+          },
+          "Response": {
+            "type": "string",
+            "enum": ["True"]
+          }
+        },
+        "required": [
+          "Title", "Year", "Rated", "Released", "Runtime", "Genre", "Director",
+          "Writer", "Actors", "Plot", "Language", "Country", "Awards", "Poster",
+          "Ratings", "Metascore", "imdbRating", "imdbVotes", "imdbID", "Type",
+          "totalSeasons", "Response"
+        ]
+      },
+      "EpisodeResponse": {
+        "type": "object",
+        "description": "Full episode detail response. 24 fields, all always present. Differs from MovieResponse: no DVD, BoxOffice, Production, Website, no totalSeasons; adds Season, Episode, seriesID. Awards and Metascore are always N/A. Some 'orphaned' episodes have correlated N/A across Season, Episode, seriesID, and imdbVotes.",
+        "properties": {
+          "Title": {
+            "type": "string",
+            "description": "Episode title. Multi-segment episodes use '/' separator. E.g. 'Pups Save Thanksgiving/Pups Save a Windy Bay'."
+          },
+          "Year": {
+            "type": "string",
+            "description": "Air year as 4-digit string."
+          },
+          "Rated": {
+            "type": "string",
+            "description": "TV content rating. E.g. 'TV-14', 'TV-Y'. Can be N/A."
+          },
+          "Released": {
+            "type": "string",
+            "description": "Air date in 'DD Mon YYYY' format."
+          },
+          "Season": {
+            "type": "string",
+            "description": "Season number as numeric string. E.g. '3'. Can be N/A for orphaned episodes."
+          },
+          "Episode": {
+            "type": "string",
+            "description": "Episode number as numeric string. E.g. '10'. Can be N/A for orphaned episodes."
+          },
+          "Runtime": {
+            "type": "string",
+            "description": "Runtime as 'NN min' string. Can be N/A."
+          },
+          "Genre": {
+            "type": "string",
+            "description": "Comma-separated genre list."
+          },
+          "Director": {
+            "type": "string",
+            "description": "Comma-separated director name(s). May contain Unicode. N/A for 55% of episodes (common for animated content)."
+          },
+          "Writer": {
+            "type": "string",
+            "description": "Comma-separated writer name(s). May include parenthetical role annotations. E.g. 'Else Holmelund Minarik (creator), Maurice Sendak (creator)'. Can be N/A."
+          },
+          "Actors": {
+            "type": "string",
+            "description": "Comma-separated actor names, typically 3-4."
+          },
+          "Plot": {
+            "type": "string",
+            "description": "Episode synopsis. Short plots truncate at ~233 chars. Can be N/A."
+          },
+          "Language": {
+            "type": "string",
+            "description": "Comma-separated language list. N/A for 66% of episodes."
+          },
+          "Country": {
+            "type": "string",
+            "description": "Comma-separated country names. Order is not consistent (e.g. both 'United States, Canada' and 'Canada, United States' observed). N/A for 66% of episodes."
+          },
+          "Awards": {
+            "type": "string",
+            "description": "Always 'N/A' for episodes in sample data."
+          },
+          "Poster": {
+            "type": "string",
+            "description": "URL to episode poster. Multiple episodes of the same show may share the same URL."
+          },
+          "Ratings": {
+            "type": "array",
+            "description": "External ratings. 0-1 entries for episodes. Only IMDB source observed. Empty array [] when unrated.",
+            "items": { "$ref": "#/components/schemas/RatingEntry" }
+          },
+          "Metascore": {
+            "type": "string",
+            "description": "Always 'N/A' for episodes."
+          },
+          "imdbRating": {
+            "type": "string",
+            "description": "IMDb rating as decimal string. N/A for 69% of episodes (especially children's content)."
+          },
+          "imdbVotes": {
+            "type": "string",
+            "description": "Vote count as integer string. Note: episode-level votes may NOT be comma-formatted (e.g. '3026' not '3,026') unlike movie-level votes. Can be N/A."
+          },
+          "imdbID": {
+            "type": "string",
+            "description": "IMDb title ID for this episode.",
+            "pattern": "^tt\\d{7,8}$"
+          },
+          "seriesID": {
+            "type": "string",
+            "description": "IMDb title ID of the parent series. E.g. 'tt0452046'. Can be N/A for orphaned episodes. Episode-only field.",
+            "pattern": "^tt\\d{7,8}$"
+          },
+          "Type": {
+            "type": "string",
+            "description": "Always 'episode' for this response shape.",
+            "enum": ["episode"]
+          },
+          "Response": {
+            "type": "string",
+            "enum": ["True"]
+          }
+        },
+        "required": [
+          "Title", "Year", "Rated", "Released", "Season", "Episode", "Runtime",
+          "Genre", "Director", "Writer", "Actors", "Plot", "Language", "Country",
+          "Awards", "Poster", "Ratings", "Metascore", "imdbRating", "imdbVotes",
+          "imdbID", "seriesID", "Type", "Response"
+        ]
+      },
+      "SeasonResponse": {
+        "type": "object",
+        "description": "Season episode listing. Completely different shape from title responses — only 5 top-level fields. The Episodes array contains lightweight episode summaries (5 fields each), NOT full episode detail. Episode numbering is sparse: gaps are common, some seasons don't start at episode 1. Not documented in the official Swagger.",
+        "properties": {
+          "Title": {
+            "type": "string",
+            "description": "Series title (not season title). Same value across all seasons of the same show."
+          },
+          "Season": {
+            "type": "string",
+            "description": "Requested season number as string. E.g. '1'."
+          },
+          "totalSeasons": {
+            "type": "string",
+            "description": "Total season count for the series as string. E.g. '5'."
+          },
+          "Episodes": {
+            "type": "array",
+            "description": "Episode summaries for this season. Array length 4-26 observed. Not guaranteed contiguous — episode numbers can have gaps.",
+            "items": { "$ref": "#/components/schemas/SeasonEpisodeSummary" }
+          },
+          "Response": {
+            "type": "string",
+            "enum": ["True"]
+          }
+        },
+        "required": ["Title", "Season", "totalSeasons", "Episodes", "Response"]
+      },
+      "SeasonEpisodeSummary": {
+        "type": "object",
+        "description": "Lightweight episode summary within a season listing. Only 5 fields — substantially less detail than a full EpisodeResponse. Note: Released uses ISO 8601 (YYYY-MM-DD) here, unlike the 'DD Mon YYYY' format in title responses.",
+        "properties": {
+          "Title": {
+            "type": "string",
+            "description": "Episode title. Multi-segment titles use '/' separator. 38% contain slashes in sample data."
+          },
+          "Released": {
+            "type": "string",
+            "description": "Air date in ISO 8601 format (YYYY-MM-DD). E.g. '1995-11-06'. DIFFERENT FORMAT than title responses which use 'DD Mon YYYY'. Can be N/A."
+          },
+          "Episode": {
+            "type": "string",
+            "description": "Episode number as string. Not guaranteed sequential — gaps are common."
+          },
+          "imdbRating": {
+            "type": "string",
+            "description": "IMDb rating as decimal string. E.g. '7.6'. N/A for 48% of episodes (especially children's content)."
+          },
+          "imdbID": {
+            "type": "string",
+            "description": "IMDb title ID for this episode.",
+            "pattern": "^tt\\d{7,8}$"
+          }
+        },
+        "required": ["Title", "Released", "Episode", "imdbRating", "imdbID"]
+      },
+      "SearchResponse": {
+        "type": "object",
+        "description": "Search results response. Validated against 21 sample responses. Always 10 results per page. Adult content suppressed. Short/ambiguous queries (e.g. 'it', 'up') return an error ('Too many results.') rather than results. Default page is 1 — omitting page param returns identical results to page=1. Known issue: duplicate entries can appear in the same result set (observed: Batman v Superman tt2975590 appeared twice on page 1).",
+        "properties": {
+          "Search": {
+            "type": "array",
+            "description": "Array of search result items. Always exactly 10 items per page (fewer on the last page). 5 fields per item.",
+            "items": { "$ref": "#/components/schemas/SearchResultItem" }
+          },
+          "totalResults": {
+            "type": "string",
+            "description": "Total result count as numeric string (not integer). E.g. '637'. Used with the page parameter for pagination (10 results per page)."
+          },
+          "Response": {
+            "type": "string",
+            "enum": ["True"]
+          }
+        },
+        "required": ["Search", "totalResults", "Response"]
+      },
+      "SearchResultItem": {
+        "type": "object",
+        "description": "Individual search result. Exactly 5 fields, validated from sample data. This is a lightweight summary — use the i parameter with the imdbID to get full detail.",
+        "properties": {
+          "Title": {
+            "type": "string",
+            "description": "Title of the result."
+          },
+          "Year": {
+            "type": "string",
+            "description": "Year as string. Movies: 4-digit year (e.g. '2005'). Series: en-dash range using U+2013 (e.g. '1992\u20131995' or '2022\u2013' for ongoing). Known encoding issue: en-dash may appear as mojibake depending on response encoding."
+          },
+          "imdbID": {
+            "type": "string",
+            "description": "IMDb title ID.",
+            "pattern": "^tt\\d{7,8}$"
+          },
+          "Type": {
+            "type": "string",
+            "description": "Content type. Includes 'game' which is not in the official Swagger enum.",
+            "enum": ["movie", "series", "episode", "game"]
+          },
+          "Poster": {
+            "type": "string",
+            "description": "Poster URL at m.media-amazon.com or 'N/A'."
+          }
+        },
+        "required": ["Title", "Year", "imdbID", "Type", "Poster"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Error response. Returned for invalid queries, not-found titles, out-of-range seasons, too-ambiguous searches, etc. Known error messages: 'Series or season not found!', 'Movie not found!', 'Too many results.', 'Incorrect IMDb ID.', 'Invalid API key!'. Known issue: some error responses may contain malformed JSON (GitHub issue #301, #322).",
+        "properties": {
+          "Response": {
+            "type": "string",
+            "description": "Always 'False' (string, not boolean) for error responses.",
+            "enum": ["False"]
+          },
+          "Error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        },
+        "required": ["Response", "Error"]
+      }
+    }
+  },
+  "x-omdb-quirks": {
+    "description": "Known API quirks and data quality issues documented from GitHub issues and sample data analysis. These should inform plugin transformation logic.",
+    "all-fields-are-strings": "Every value is a JSON string, including numbers, booleans, dates, and lists. GitHub issue #276.",
+    "na-sentinel": "The string 'N/A' is used as a null sentinel on all string fields. JSON null is never returned. The Ratings array uses [] instead of N/A.",
+    "mixed-casing": "Most fields are PascalCase but totalSeasons, imdbRating, imdbVotes, imdbID, seriesID are camelCase. This is inconsistent and appears to be a legacy quirk.",
+    "date-format-inconsistency": "Title responses use 'DD Mon YYYY' (e.g. '14 Oct 1994'). Season episode summaries use ISO 8601 'YYYY-MM-DD' (e.g. '1994-10-14'). Two different date formats from the same API.",
+    "year-en-dash": "Series Year field uses en-dash U+2013, not hyphen U+002D. Parsers splitting on '-' will fail.",
+    "comma-separated-lists": "Genre, Director, Writer, Actors, Language, Country are comma-separated strings, not JSON arrays. Writer may include inline parenthetical annotations like '(creator)'.",
+    "malformed-json": "Some responses contain malformed JSON, particularly when number parsing fails server-side. GitHub issues #301, #322.",
+    "runtime-quirks": "Runtime is 'NNN min' string. Known malformed value: '18S min' for The Last of Us series. Cannot assume numeric prefix is purely digits.",
+    "deprecated-fields": "DVD (96.4% N/A), Production (95.5% N/A), Website (100% N/A) are effectively dead but still returned in every movie response.",
+    "poster-api-tiered": "Patreon tiers claim poster API (img.omdbapi.com) requires Standard ($5/mo) or above, but empirical testing (April 2026) confirms free-tier keys receive 200 image/jpeg responses. Tier restriction appears unenforced. See x-omdb-poster-api for full tier breakdown.",
+    "data-staleness": "OMDb scrapes IMDb but updates infrequently. Ratings and metadata may be stale. GitHub issues #338, #305, #280.",
+    "search-type-behavior": "Search results differ with vs without the type parameter, even when no type value is given. GitHub issue #285.",
+    "imdb-id-length": "Historically 7-digit (tt + 7 digits = 9 chars), newer titles use 8-digit (tt + 8 digits = 10 chars). Eight-digit support confirmed in docs.",
+    "redundant-ratings": "imdbRating duplicates the IMDB entry in Ratings[] (minus '/10'). Metascore duplicates the Metacritic entry (minus '/100').",
+    "episode-votes-no-commas": "Episode-level imdbVotes may not use comma formatting (e.g. '3026' not '3,026'), unlike movie-level votes which always comma-format. Parser must handle both.",
+    "game-type": "OMDb tracks video games from IMDb. Type 'game' appears in search results and works as a search filter (type=game). The Swagger only documents 'movie' and 'series'.",
+    "search-too-many-results": "Short or ambiguous search queries (e.g. 's=it', 's=up') return an error 'Too many results.' instead of results. Minimum query specificity required but not documented.",
+    "search-duplicates": "Search results can contain duplicate entries. Observed: Batman v Superman (tt2975590) appeared twice in the same page 1 result set.",
+    "search-pagination": "10 results per page. Default page=1. Page range 1-100. Omitting page returns identical results to page=1.",
+    "year-encoding-mojibake": "Series Year field uses en-dash U+2013 in title responses, but search results may return mojibake depending on response encoding. Parsers should handle both clean en-dash and garbled multi-byte sequences in year range strings.",
+    "xml-format-is-different-contract": "The API supports r=xml but the XML format is a fundamentally different structure from JSON. Title responses use XML attributes on a single element (not child elements), the Ratings array and several fields (DVD, BoxOffice, Production, Website) are absent from XML, field casing differs between response types (lowercase for title responses, PascalCase for season responses), and missing values omit the attribute entirely rather than using 'N/A'. The XML format is effectively a separate API contract. This spec documents JSON only."
+  }
+}
