@@ -33,7 +33,7 @@ jobs:
   validate-structure:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Validate spec directory structure
         run: |
@@ -111,7 +111,7 @@ jobs:
           done
 
       - name: Upload ZIP artifacts for this run
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spec-folder-zips-${{ github.run_id }}
           path: dist/*.zip
