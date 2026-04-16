@@ -12,6 +12,23 @@ High-quality API specs and interactive Swagger UIs for tools that deserve better
 |------|---------|-----------|
 | [Technitium DNS Server](https://warrentc3.github.io/netizen/technitium-dns/) | 14.3 | 129 |
 | [TVmaze API](https://warrentc3.github.io/netizen/tvmaze/) | unversioned | 31 |
+| [Schedules Direct](https://warrentc3.github.io/netizen/schedulesdirect/) | 20141201 | 25 |
+
+## Local Usage
+
+Each spec folder includes `serve.py` and `serve.ps1` for running the Swagger UI locally with full "Try it out" support.
+
+```bash
+# Python
+python serve.py
+
+# PowerShell 7+
+pwsh serve.ps1
+```
+
+On first run, the scripts download the Swagger UI assets (`swagger-ui.css`, `swagger-ui-bundle.js`, `swagger-ui-standalone-preset.js`) into the spec folder. Subsequent runs are fully offline.
+
+The scripts auto-open a browser, proxy API calls to avoid CORS restrictions, and shut down after 120 seconds of inactivity. Use `-k` / `-KeepAlive` to run indefinitely, or `-p` / `-Port` to change the default port (8080).
 
 ## License
 

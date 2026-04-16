@@ -122,14 +122,22 @@
           SwaggerUIStandalonePreset
         ],
         layout: "StandaloneLayout",
-        tryItOutEnabled: true,
+        tryItOutEnabled: ['127.0.0.1', 'localhost'].includes(window.location.hostname),
         persistAuthorization: true,
         deepLinking: true,
         displayRequestDuration: true,
         defaultModelsExpandDepth: 1,
         defaultModelExpandDepth: 2,
         docExpansion: "list",
-        filter: true
+        filter: true,
+        validatorUrl: null,
+        requestInterceptor: function(req) {
+          var apiBase = 'https://api.tvmaze.com';
+          if (req.url.startsWith(apiBase) && ['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
+            req.url = req.url.replace(apiBase, window.location.origin + '/api');
+          }
+          return req;
+        }
       });
     }
 

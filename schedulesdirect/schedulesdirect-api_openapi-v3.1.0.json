@@ -1,0 +1,2766 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Schedules Direct JSON API",
+    "version": "20141201",
+    "description": "# Schedules Direct JSON API\n\nSchedules Direct is a nonprofit TV listings / EPG data service. This API provides access to program guide data including lineups, schedules, program metadata, images, and celebrity information.\n\n## Authentication\n\n1. Hash your password using SHA1 (lowercase hex, 40 characters)\n2. `POST /token` with username and hashed password to obtain a token\n3. Include the token in subsequent requests via the `token` header or `?token=` query parameter\n4. Tokens are valid for 24 hours from the first request in that period\n\n## Client Workflow\n\n1. Obtain token via `POST /token`\n2. Check account status via `GET /status`\n3. Search headends via `GET /headends`\n4. Preview and add lineups via `GET /lineups/preview/{lineupId}` and `PUT /lineups/{lineupId}`\n5. Get lineup channel mapping via `GET /lineups/{lineupId}`\n6. Check schedule changes via `POST /schedules/md5`\n7. Download schedules via `POST /schedules`\n8. Download program details via `POST /programs`\n9. Download images via `GET /image/{uri}`\n\n## Caching Strategy\n\nAll responses include MD5 hashes. Clients should cache data locally and use MD5 comparisons to detect changes before downloading updates.\n\n## Date/Time Format\n\nAll dates and times use ISO 8601 in UTC/Zulu time (suffix `Z`). No DST adjustments are made.\n\n## Character Encoding\n\nAll requests and responses use UTF-8.",
+    "contact": {
+      "name": "Schedules Direct",
+      "url": "https://schedulesdirect.org"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://json.schedulesdirect.org/20141201",
+      "description": "Production server (API version 20141201)"
+    }
+  ],
+  "security": [
+    {
+      "TokenHeader": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Token management"
+    },
+    {
+      "name": "Status",
+      "description": "Account status, server health, and client version checks"
+    },
+    {
+      "name": "Available",
+      "description": "Discovery of available countries, services, and transmitters"
+    },
+    {
+      "name": "Lineups",
+      "description": "Headend discovery, lineup management, and channel mapping"
+    },
+    {
+      "name": "Programs",
+      "description": "Program metadata, descriptions, and language cross-references"
+    },
+    {
+      "name": "Schedules",
+      "description": "Schedule retrieval and change detection via MD5"
+    },
+    {
+      "name": "Sports",
+      "description": "Live sports event status"
+    },
+    {
+      "name": "Images",
+      "description": "Image metadata and retrieval for programs, stations, and celebrities"
+    },
+    {
+      "name": "Celebrity",
+      "description": "Celebrity biographical data and images"
+    },
+    {
+      "name": "Messages",
+      "description": "Account message management"
+    }
+  ],
+  "paths": {
+    "/token": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Obtain an authentication token",
+        "description": "This is the first call your client must make — almost all other endpoints require a token. Authenticates with username and SHA1-hashed password (lowercase hex, 40 characters). A token is valid for 24 hours from the time it was first granted. Subsequent calls with the same credentials during the 24-hour window return the existing token. A token becomes invalid when: (1) 24 hours elapse since it was first granted, or (2) a new token is explicitly requested via the `newToken` field. If the service is offline (code 3000), disconnect and retry in 30 minutes — a token may still be returned for later use. There is a limited number of token requests allowed per 24-hour period; once obtained, reuse the token until it expires.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "description": "Account email address"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "SHA1 hex hash of the password (lowercase, 40 characters)",
+                    "pattern": "^[a-f0-9]{40}$"
+                  },
+                  "newToken": {
+                    "type": "boolean",
+                    "description": "Set to true to force generation of a new token instead of returning the existing one. Default is false.",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token issued successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Authentication failure (expired account, invalid hash, invalid user, lockout, disabled account, too many logins, too many IPs)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "tags": ["Status"],
+        "summary": "Get account and system status",
+        "description": "Returns account details (expiration, max lineups), subscribed lineups, last data update time, notifications, and system status.",
+        "responses": {
+          "200": {
+            "description": "Status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ip_isblocked": {
+      "get": {
+        "tags": ["Status"],
+        "summary": "Check if IP is blocked on load balancer",
+        "description": "Checks whether the client IP is blocked. Rate limited to 100 calls per 24 hours (resets at 00:00Z).",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Block status returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "integer",
+                      "example": 0
+                    },
+                    "blocked_on_load_balancer": {
+                      "type": "boolean",
+                      "example": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/version/{clientName}": {
+      "get": {
+        "tags": ["Status"],
+        "summary": "Check latest version of a registered client",
+        "description": "Returns the latest known version for a registered client application.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "clientName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "mfdb-json"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Version information returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "response": {
+                      "type": "string",
+                      "example": "OK"
+                    },
+                    "code": {
+                      "type": "integer",
+                      "example": 0
+                    },
+                    "client": {
+                      "type": "string",
+                      "example": "mfdb-json"
+                    },
+                    "version": {
+                      "type": "string",
+                      "example": "0.11"
+                    },
+                    "serverID": {
+                      "type": "string"
+                    },
+                    "datetime": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unknown client",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/available": {
+      "get": {
+        "tags": ["Available"],
+        "summary": "Get available service types",
+        "description": "Returns the list of available service types (countries, languages, DVB-S satellites, etc.) with their URIs.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Available services returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AvailableService"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/available/countries": {
+      "get": {
+        "tags": ["Available"],
+        "summary": "Get available countries",
+        "description": "Returns countries grouped by region, including postal code patterns for headend lookups.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Countries grouped by region",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Country"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/available/languages": {
+      "get": {
+        "tags": ["Available"],
+        "summary": "Get available languages",
+        "description": "Returns a list of language digraphs and their language names.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Languages returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "description": "Language name"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/available/dvb-s": {
+      "get": {
+        "tags": ["Available"],
+        "summary": "Get available DVB-S satellites",
+        "description": "Returns a list of satellites available for DVB-S lineups.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Satellites returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/transmitters/{iso3166alpha3}": {
+      "get": {
+        "tags": ["Available"],
+        "summary": "Get DVB-T transmitters for a country",
+        "description": "Returns a map of transmitter names to lineup IDs for the specified country (DVB-T only).",
+        "security": [],
+        "parameters": [
+          {
+            "name": "iso3166alpha3",
+            "in": "path",
+            "required": true,
+            "description": "ISO 3166-1 alpha-3 country code",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "example": "GBR"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transmitter map returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "description": "Lineup ID"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/headends": {
+      "get": {
+        "tags": ["Lineups"],
+        "summary": "Get headends for a postal code",
+        "description": "Returns available headends (cable, satellite, antenna, etc.) for the specified country and postal code.",
+        "parameters": [
+          {
+            "name": "country",
+            "in": "query",
+            "required": true,
+            "description": "ISO 3166-1 alpha-3 country code",
+            "schema": {
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            },
+            "example": "USA"
+          },
+          {
+            "name": "postalcode",
+            "in": "query",
+            "required": true,
+            "description": "Postal code valid for the specified country",
+            "schema": {
+              "type": "string"
+            },
+            "example": "60601"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Headends returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Headend"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lineups/preview/{lineupId}": {
+      "get": {
+        "tags": ["Lineups"],
+        "summary": "Preview a lineup before adding",
+        "description": "Returns a preview of channels in a lineup without adding it to the account.",
+        "parameters": [
+          {
+            "name": "lineupId",
+            "in": "path",
+            "required": true,
+            "description": "Lineup identifier (e.g., USA-IL57303-X)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "USA-IL57303-X"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineup preview returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LineupPreviewChannel"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lineups/{lineupId}": {
+      "get": {
+        "tags": ["Lineups"],
+        "summary": "Get lineup channel mapping",
+        "description": "Returns the full channel-to-stationID mapping, station details, and metadata for a lineup already added to the account. Use the `verboseMap: true` header for additional digital transport data.",
+        "parameters": [
+          {
+            "name": "lineupId",
+            "in": "path",
+            "required": true,
+            "description": "Lineup identifier (e.g., USA-IL57303-X)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "USA-IL57303-X"
+          },
+          {
+            "name": "verboseMap",
+            "in": "header",
+            "required": false,
+            "description": "Set to 'true' for additional data on digital transports (providerCallsign, logicalChannelNumber, matchType)",
+            "schema": {
+              "type": "string",
+              "enum": ["true"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineup mapping returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineupMapping"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Lineups"],
+        "summary": "Add a lineup to the account",
+        "description": "Adds a lineup to the user's account. Limited to 6 adds per 24-hour period. Default maximum of 4 lineups per account (can be increased via support).",
+        "parameters": [
+          {
+            "name": "lineupId",
+            "in": "path",
+            "required": true,
+            "description": "Lineup identifier (e.g., USA-IL57303-X)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "USA-IL57303-X"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineup added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineupChangeResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Lineups"],
+        "summary": "Remove a lineup from the account",
+        "description": "Removes a lineup from the user's account.",
+        "parameters": [
+          {
+            "name": "lineupId",
+            "in": "path",
+            "required": true,
+            "description": "Lineup identifier (e.g., USA-IL57303-X)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "USA-IL57303-X"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lineup deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LineupChangeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lineups": {
+      "get": {
+        "tags": ["Lineups"],
+        "summary": "Get all lineups on the account",
+        "description": "Returns all lineups currently added to the user's account.",
+        "responses": {
+          "200": {
+            "description": "User lineups returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserLineupsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/programs": {
+      "post": {
+        "tags": ["Programs"],
+        "summary": "Get program details (batch)",
+        "description": "Returns detailed metadata for up to 5000 program IDs per request.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "14-character programID",
+                  "pattern": "^(EP|SH|MV|SP)\\d{10}$"
+                },
+                "maxItems": 5000
+              },
+              "example": ["EP012801050074", "MV008961210000"]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Program details returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Program"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metadata/description/": {
+      "post": {
+        "tags": ["Programs"],
+        "summary": "Get generic program descriptions",
+        "description": "Returns short (100-char) and long (1000-char) generic descriptions for EP-type program IDs. The response keys are the corresponding SH-prefix base IDs. Max 500 per request.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "EP-type programID"
+                },
+                "maxItems": 500
+              },
+              "example": ["EP000000060011", "EP000186930001"]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Descriptions returned, keyed by SH-prefix base programID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/GenericDescription"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/xref": {
+      "post": {
+        "tags": ["Programs"],
+        "summary": "Get language cross-references for programs",
+        "description": "Returns available language versions of the specified program IDs.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "14-character programID"
+                }
+              },
+              "example": ["EP000000060013", "EP006883590001"]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cross-references returned, keyed by programID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/LanguageCrossReference"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedules": {
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Get schedules for stations",
+        "description": "Returns program schedules for the specified station IDs and optional date ranges. Max 5000 station IDs per request.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ScheduleRequest"
+                },
+                "maxItems": 5000
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Schedules returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StationSchedule"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/schedules/md5": {
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Get schedule MD5 hashes for change detection",
+        "description": "Returns MD5 hashes and last-modified timestamps for schedules, enabling clients to detect changes without downloading full schedules. Max 5000 station IDs per request.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ScheduleRequest"
+                },
+                "maxItems": 5000
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "MD5 hashes returned, keyed by stationID then date",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "$ref": "#/components/schemas/ScheduleMd5Entry"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metadata/stillRunning/{programId}": {
+      "get": {
+        "tags": ["Sports"],
+        "summary": "Check if a sports event is still in progress",
+        "description": "Returns the live status and current score for an in-progress sporting event. Supports NFL, NHL, NBA, and MLB.",
+        "parameters": [
+          {
+            "name": "programId",
+            "in": "path",
+            "required": true,
+            "description": "SP-type programID for the sporting event",
+            "schema": {
+              "type": "string",
+              "pattern": "^SP\\d{12}$"
+            },
+            "example": "SP003190180000"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Event status returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SportsStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metadata/programs/{programId}": {
+      "get": {
+        "tags": ["Images"],
+        "summary": "Get image metadata for a single program",
+        "description": "Returns available image metadata (URIs, dimensions, categories) for a single program ID or rootId. To receive episode-specific artwork (hasEpisodeArtwork), movie artwork (hasMovieArtwork), or sports artwork (hasSportsArtwork), send the full 14-character programID. Sending only the left-most 10 characters is deprecated and will return series-level artwork only. The response may include a rootId field that can be used to retrieve related artwork via this same endpoint. URIs in the response are ephemeral — do not store them permanently.",
+        "parameters": [
+          {
+            "name": "programId",
+            "in": "path",
+            "required": true,
+            "description": "14-character programID, or a numeric rootId from a previous image metadata response",
+            "schema": {
+              "type": "string"
+            },
+            "example": "EP000176170567"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image metadata returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProgramImage"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metadata/programs/": {
+      "post": {
+        "tags": ["Images"],
+        "summary": "Get image metadata for multiple programs (batch)",
+        "description": "Returns image metadata for up to 500 program IDs. Use full 14-character program IDs — sending the left-most 10 characters is deprecated and will return only series-level artwork, not episode-specific images. Each element in the response is JSON, but note that when errors occur (e.g., invalid programID), the error response for that element is inline alongside successful results. URIs in the response are ephemeral — do not store them permanently.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "14-character programID"
+                },
+                "maxItems": 500
+              },
+              "example": ["SH007122400000", "EP003851900001"]
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Image metadata returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProgramImageBatchEntry"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/image/{uri}": {
+      "get": {
+        "tags": ["Images"],
+        "summary": "Get an image by URI",
+        "description": "Redirects (HTTP 303) to an S3 URL for the requested image. The redirect URL is valid for 120 seconds — do not cache it. Token can be provided via header or `?token=` query parameter. If the URI from the image metadata is already a complete S3 URL (contains 'https://'), access it directly instead of using this endpoint. There is a daily image download limit per subscriber (counter resets at 00:00Z). Exceeding it returns code 5002/5003 — stop requests immediately or the account will be blocked.",
+        "parameters": [
+          {
+            "name": "uri",
+            "in": "path",
+            "required": true,
+            "description": "Image URI from metadata response (SHA256 hash filename)",
+            "schema": {
+              "type": "string"
+            },
+            "example": "b84abac24a3b46f039e5d0d32506bf435392b4e739f67e7315536963e1a7c36f.jpg"
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Redirect to S3 image URL (valid for 120 seconds)",
+            "headers": {
+              "Location": {
+                "description": "Temporary S3 URL for the image",
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Image not found (code 5000, do not retry)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metadata/celebrity/{personId}": {
+      "get": {
+        "tags": ["Celebrity"],
+        "summary": "Get images for a celebrity",
+        "description": "Returns available images for a celebrity by their personId. The personId is preferred over nameId — a person may have multiple nameIds (due to marriage, alternate spellings, etc.) but a single personId. Response may include rootId and title fields linking images back to specific programs. URIs in the response are ephemeral — do not store them permanently. Note: the Retrieving Images wiki page indicates token is not required for this endpoint, while the main API page indicates it is required. Behavior may vary — send the token if available.",
+        "parameters": [
+          {
+            "name": "personId",
+            "in": "path",
+            "required": true,
+            "description": "Numeric person ID (as string, do not convert to integer)",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "example": "68293"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Celebrity images returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CelebrityImage"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/celebrity/{personId}": {
+      "get": {
+        "tags": ["Celebrity"],
+        "summary": "Get celebrity biographical details",
+        "description": "Returns full biographical data for a celebrity including names, mediography, awards, and images. PersonId values must be treated as strings, not integers.",
+        "parameters": [
+          {
+            "name": "personId",
+            "in": "path",
+            "required": true,
+            "description": "Numeric person ID (as string, do not convert to integer)",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            },
+            "example": "68293"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Celebrity details returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Celebrity"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Incorrectly formatted request (e.g., trailing slash)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages/{messageId}": {
+      "delete": {
+        "tags": ["Messages"],
+        "summary": "Delete a message",
+        "description": "Removes a non-system message from the account status response.",
+        "parameters": [
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "TokenHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "token",
+        "description": "Authentication token obtained from POST /token. Alternatively, pass as `?token=` query parameter (query parameter takes precedence)."
+      }
+    },
+    "schemas": {
+      "BaseResponse": {
+        "type": "object",
+        "properties": {
+          "response": {
+            "type": "string",
+            "example": "OK"
+          },
+          "code": {
+            "type": "integer",
+            "description": "0 for success, non-zero for errors",
+            "example": 0
+          },
+          "serverID": {
+            "type": "string",
+            "example": "20141201.web"
+          },
+          "message": {
+            "type": "string",
+            "example": "OK"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["response", "code"],
+        "properties": {
+          "response": {
+            "type": "string",
+            "description": "Error response code",
+            "enum": [
+              "INVALID_JSON",
+              "USERAGENT_REQUIRED",
+              "TOKEN_MISSING",
+              "UNKNOWN_CLIENT",
+              "MAX_CHUNK_EXCEEDED",
+              "EMPTY_REQUEST",
+              "INCORRECT_REQUEST",
+              "TOKEN_INVALID",
+              "INCORRECT_CONTENT_TYPE",
+              "REQUIRED_REQUEST_MISSING",
+              "REQUIRED_PARAMETER_MISSING:COUNTRY",
+              "REQUIRED_PARAMETER_MISSING:POSTALCODE",
+              "REQUIRED_PARAMETER_MISSING:PERSONID",
+              "INVALID_PARAMETER:COUNTRY",
+              "INVALID_PARAMETER:UNKNOWN REQUEST",
+              "INVALID_PARAMETER:DEBUG",
+              "DUPLICATE_LINEUP",
+              "LINEUP_NOT_FOUND",
+              "UNKNOWN_LINEUP",
+              "INVALID_LINEUP_DELETE",
+              "LINEUP_WRONG_FORMAT",
+              "INVALID_LINEUP",
+              "LINEUP_DELETED",
+              "INVALID_COUNTRY",
+              "INVALID_PERSONID",
+              "STATIONID_NOT_FOUND",
+              "STATIONID_DELETED",
+              "SERVICE_OFFLINE",
+              "SERVER_BUSY",
+              "INVALID_ENDPOINT",
+              "ACCOUNT_EXPIRED",
+              "INVALID_HASH",
+              "INVALID_USER",
+              "ACCOUNT_LOCKOUT",
+              "JSON_ACCOUNT_ACCESS_DISABLED",
+              "TOKEN_EXPIRED",
+              "APPLICATION_DISABLED",
+              "ACCOUNT_INACTIVE",
+              "TOO_MANY_LOGINS",
+              "TOO_MANY_UNIQUE_IPS",
+              "MAX_LINEUP_CHANGES_REACHED",
+              "MAX_LINEUPS",
+              "NO_LINEUPS",
+              "IMAGE_NOT_FOUND",
+              "MAX_IMAGE_DOWNLOADS",
+              "MAX_IMAGE_DOWNLOADS_TRIAL",
+              "MAX_IMAGE_INVALID_URI_ERRORS",
+              "INVALID_PROGRAMID",
+              "PROGRAMID_QUEUED",
+              "FUTURE_PROGRAM",
+              "SCHEDULE_NOT_FOUND",
+              "INVALID_SCHEDULE_REQUEST",
+              "SCHEDULE_RANGE_EXCEEDED",
+              "SCHEDULE_NOT_IN_LINEUP",
+              "SCHEDULE_QUEUED",
+              "HCF"
+            ]
+          },
+          "code": {
+            "type": "integer",
+            "description": "Numeric error code. Ranges: 1xxx = format/request, 2xxx = parameter/lineup/station, 3xxx = service, 4xxx = account/auth, 5xxx = image, 6xxx = program, 7xxx = schedule, 9999 = unknown."
+          },
+          "message": {
+            "type": "string"
+          },
+          "serverID": {
+            "type": "string"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "serverTime": {
+            "type": "integer",
+            "description": "Current server time as UNIX epoch timestamp"
+          },
+          "token": {
+            "type": "string",
+            "description": "May be returned even during SERVICE_OFFLINE for later use"
+          },
+          "tokenExpires": {
+            "type": "integer",
+            "description": "Token expiration as UNIX epoch timestamp (may be 0 during SERVICE_OFFLINE)"
+          },
+          "retryTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "For SCHEDULE_QUEUED: honor this time before retrying"
+          },
+          "accountExpiration": {
+            "type": "integer",
+            "description": "UNIX epoch timestamp of account expiration (for ACCOUNT_EXPIRED)"
+          },
+          "eventStartDateTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "For FUTURE_PROGRAM: when the event is scheduled to start"
+          },
+          "programID": {
+            "type": "string",
+            "description": "For PROGRAMID_QUEUED / FUTURE_PROGRAM: the programID in question"
+          },
+          "stationID": {
+            "type": "string",
+            "description": "For SCHEDULE_QUEUED: the stationID being generated"
+          },
+          "minDate": {
+            "type": "string",
+            "format": "date",
+            "description": "For SCHEDULE_RANGE_EXCEEDED: earliest available date for the stationID"
+          },
+          "maxDate": {
+            "type": "string",
+            "format": "date",
+            "description": "For SCHEDULE_RANGE_EXCEEDED: latest available date for the stationID"
+          },
+          "requestedDate": {
+            "type": "string",
+            "format": "date",
+            "description": "For SCHEDULE_RANGE_EXCEEDED: the out-of-range date that was requested"
+          }
+        }
+      },
+      "TokenResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseResponse" },
+          {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "description": "32-character authentication token",
+                "minLength": 32,
+                "maxLength": 32,
+                "example": "6f9b52cafe4716deadbeefa959b882c7"
+              },
+              "tokenExpires": {
+                "type": "integer",
+                "description": "Token expiration as UNIX epoch timestamp"
+              },
+              "serverTime": {
+                "type": "integer",
+                "description": "Current server time as UNIX epoch timestamp"
+              }
+            }
+          }
+        ]
+      },
+      "StatusResponse": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountStatus"
+          },
+          "lineups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StatusLineup"
+            }
+          },
+          "lastDataUpdate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "notifications": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "systemStatus": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemStatus"
+            }
+          },
+          "serverID": {
+            "type": "string"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "code": {
+            "type": "integer"
+          },
+          "tokenExpires": {
+            "type": "integer",
+            "description": "UNIX epoch timestamp"
+          }
+        }
+      },
+      "AccountStatus": {
+        "type": "object",
+        "properties": {
+          "expires": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "accountExpiration": {
+            "type": "integer",
+            "description": "UNIX epoch timestamp"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "maxLineups": {
+            "type": "integer",
+            "description": "Maximum number of lineups allowed on the account",
+            "example": 4
+          }
+        }
+      },
+      "StatusLineup": {
+        "type": "object",
+        "properties": {
+          "lineup": {
+            "type": "string",
+            "example": "USA-IL57303-X"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uri": {
+            "type": "string",
+            "example": "/20141201/lineups/USA-IL57303-X"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "description": "Only present if the lineup has been deleted"
+          }
+        }
+      },
+      "SystemStatus": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "example": "Online"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "AvailableService": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Service type identifier",
+            "enum": ["COUNTRIES", "LANGUAGES", "DVB-S", "DVB-T"]
+          },
+          "description": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string",
+            "example": "/20141201/available/countries"
+          }
+        }
+      },
+      "Country": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "example": "United States"
+          },
+          "shortName": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-3 code",
+            "example": "USA"
+          },
+          "postalCodeExample": {
+            "type": "string",
+            "example": "10001"
+          },
+          "postalCode": {
+            "type": "string",
+            "description": "Regex pattern for valid postal codes",
+            "example": "^\\d{5}(-\\d{4})?$"
+          },
+          "onePostalCode": {
+            "type": "boolean",
+            "description": "If true, the entire country uses a single postal code"
+          }
+        }
+      },
+      "Headend": {
+        "type": "object",
+        "description": "A headend may contain multiple lineups. A lineup is a specific mapping of channels and stationIDs. For example, a Cable headend may offer: a DEFAULT lineup (analog channels 2-125, no set-top-box required), an X lineup (digital, requires set-top-box), and a QAM lineup (digital content available via QAM tuner without a set-top-box).",
+        "properties": {
+          "headend": {
+            "type": "string",
+            "description": "Headend identifier"
+          },
+          "transport": {
+            "type": "string",
+            "description": "Delivery transport type",
+            "enum": ["Antenna", "Cable", "DVB-C", "DVB-S", "DVB-T", "IPTV", "Satellite"]
+          },
+          "location": {
+            "type": "string"
+          },
+          "lineups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HeadendLineup"
+            }
+          }
+        }
+      },
+      "HeadendLineup": {
+        "type": "object",
+        "properties": {
+          "lineup": {
+            "type": "string",
+            "example": "USA-IL57303-X"
+          },
+          "name": {
+            "type": "string",
+            "example": "Comcast Waukegan/Lake Forest Area - Digital"
+          },
+          "uri": {
+            "type": "string",
+            "example": "/20141201/lineups/USA-IL57303-X"
+          }
+        }
+      },
+      "LineupPreviewChannel": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "example": "002"
+          },
+          "name": {
+            "type": "string",
+            "example": "WBBM"
+          },
+          "callsign": {
+            "type": "string",
+            "example": "WBBM"
+          },
+          "affiliate": {
+            "type": "string",
+            "description": "Network affiliation (may be absent)",
+            "example": "CBS"
+          }
+        }
+      },
+      "LineupMapping": {
+        "type": "object",
+        "properties": {
+          "map": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChannelMap"
+            }
+          },
+          "stations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Station"
+            }
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/LineupMetadata"
+          }
+        }
+      },
+      "ChannelMap": {
+        "type": "object",
+        "required": ["stationID", "channel"],
+        "properties": {
+          "stationID": {
+            "type": "string",
+            "example": "24326"
+          },
+          "channel": {
+            "type": "string",
+            "example": "001"
+          },
+          "uhfVhf": {
+            "type": "integer",
+            "description": "ATSC antenna transport"
+          },
+          "atscMajor": {
+            "type": "integer",
+            "description": "ATSC major channel number"
+          },
+          "atscMinor": {
+            "type": "integer",
+            "description": "ATSC minor channel number"
+          },
+          "frequencyHz": {
+            "type": "integer",
+            "description": "DVB frequency in Hz"
+          },
+          "serviceID": {
+            "type": "integer",
+            "description": "DVB service ID"
+          },
+          "networkID": {
+            "type": "integer",
+            "description": "DVB network ID"
+          },
+          "transportID": {
+            "type": "integer",
+            "description": "DVB transport ID"
+          },
+          "polarization": {
+            "type": "string",
+            "description": "DVB-S polarization"
+          },
+          "deliverySystem": {
+            "type": "string",
+            "description": "DVB-C / QAM delivery system"
+          },
+          "modulationSystem": {
+            "type": "string",
+            "description": "DVB-C / DVB-S modulation"
+          },
+          "symbolrate": {
+            "type": "integer",
+            "description": "DVB symbol rate"
+          },
+          "fec": {
+            "type": "string",
+            "description": "DVB-S forward error correction"
+          },
+          "virtualChannel": {
+            "type": "string",
+            "description": "QAM virtual channel"
+          },
+          "channelMajor": {
+            "type": "integer",
+            "description": "QAM major channel"
+          },
+          "channelMinor": {
+            "type": "integer",
+            "description": "QAM minor channel"
+          },
+          "providerCallsign": {
+            "type": "string",
+            "description": "Verbose mode: provider-assigned callsign"
+          },
+          "logicalChannelNumber": {
+            "type": "string",
+            "description": "Verbose mode: logical channel number"
+          },
+          "matchType": {
+            "type": "string",
+            "description": "Verbose mode: how the channel was matched"
+          }
+        }
+      },
+      "Station": {
+        "type": "object",
+        "properties": {
+          "stationID": {
+            "type": "string",
+            "example": "20454"
+          },
+          "name": {
+            "type": "string",
+            "example": "WBBMDT (WBBM-DT)"
+          },
+          "callsign": {
+            "type": "string",
+            "example": "WBBMDT"
+          },
+          "affiliate": {
+            "type": "string",
+            "example": "CBS"
+          },
+          "broadcastLanguage": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["en"]
+          },
+          "descriptionLanguage": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["en"]
+          },
+          "broadcaster": {
+            "$ref": "#/components/schemas/Broadcaster"
+          },
+          "isCommercialFree": {
+            "type": "boolean"
+          },
+          "stationLogo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StationLogo"
+            }
+          },
+          "logo": {
+            "type": "object",
+            "deprecated": true,
+            "description": "Legacy single logo object. Use stationLogo array instead."
+          }
+        }
+      },
+      "Broadcaster": {
+        "type": "object",
+        "properties": {
+          "city": {
+            "type": "string",
+            "example": "Chicago"
+          },
+          "state": {
+            "type": "string",
+            "example": "IL"
+          },
+          "postalcode": {
+            "type": "string",
+            "example": "60611"
+          },
+          "country": {
+            "type": "string",
+            "example": "United States"
+          }
+        }
+      },
+      "StationLogo": {
+        "type": "object",
+        "properties": {
+          "URL": {
+            "type": "string",
+            "format": "uri"
+          },
+          "height": {
+            "type": "integer",
+            "example": 270
+          },
+          "width": {
+            "type": "integer",
+            "example": 360
+          },
+          "md5": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "example": "Gracenote"
+          },
+          "category": {
+            "type": ["string", "null"],
+            "enum": ["dark", "gray", "light", "white", null],
+            "description": "Background color category the logo is designed for. May be null for legacy logos."
+          }
+        }
+      },
+      "LineupMetadata": {
+        "type": "object",
+        "properties": {
+          "lineup": {
+            "type": "string",
+            "example": "USA-OTA-90210"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["Antenna", "Cable", "DVB-C", "DVB-S", "DVB-T", "IPTV", "Satellite"]
+          },
+          "modulation": {
+            "type": "string",
+            "description": "Present on QAM lineups to differentiate from standard Cable transport",
+            "example": "QAM"
+          }
+        }
+      },
+      "LineupChangeResponse": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseResponse" },
+          {
+            "type": "object",
+            "properties": {
+              "changesRemaining": {
+                "oneOf": [
+                  { "type": "integer" },
+                  { "type": "string" }
+                ],
+                "description": "Number of lineup changes remaining in the current period",
+                "example": 254
+              }
+            }
+          }
+        ]
+      },
+      "UserLineupsResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "serverID": {
+            "type": "string"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lineups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserLineup"
+            }
+          }
+        }
+      },
+      "UserLineup": {
+        "type": "object",
+        "properties": {
+          "lineup": {
+            "type": "string",
+            "example": "USA-IL57303-X"
+          },
+          "name": {
+            "type": "string",
+            "example": "Comcast Waukegan/Lake Forest Area - Digital"
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["Antenna", "Cable", "DVB-C", "DVB-S", "DVB-T", "IPTV", "Satellite"]
+          },
+          "location": {
+            "type": "string",
+            "example": "Lake Forest"
+          },
+          "uri": {
+            "type": "string",
+            "example": "/20141201/lineups/USA-IL57303-X"
+          },
+          "isDeleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Program": {
+        "type": "object",
+        "required": ["programID", "titles", "md5"],
+        "properties": {
+          "programID": {
+            "type": "string",
+            "description": "14-character program identifier. Prefixes: EP (episode), SH (show/series), MV (movie), SP (sport)",
+            "example": "EP012801050074"
+          },
+          "resourceID": {
+            "type": "string"
+          },
+          "titles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramTitle"
+            }
+          },
+          "episodeTitle150": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "descriptions": {
+            "$ref": "#/components/schemas/ProgramDescriptions"
+          },
+          "originalAirDate": {
+            "type": "string",
+            "format": "date",
+            "description": "YYYY-MM-DD format"
+          },
+          "showType": {
+            "type": "string",
+            "example": "Series"
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "Compilation", "Episode", "Highlights", "Miniseries", "Movie",
+              "Music Video", "Off Air", "Paid Program", "Preview", "Series",
+              "Short Film", "Show", "Special", "Sport Event",
+              "Sport-Related Episode", "Sports", "TBA", "Team Event", "Trailer",
+              "TV Movie"
+            ]
+          },
+          "country": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cast": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CastMember"
+            }
+          },
+          "crew": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrewMember"
+            }
+          },
+          "contentAdvisory": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Content advisory labels (e.g., Adult Language, Violence)"
+          },
+          "contentRating": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentRating"
+            }
+          },
+          "keyWords": {
+            "type": "object",
+            "properties": {
+              "Mood": { "type": "array", "items": { "type": "string" } },
+              "Time Period": { "type": "array", "items": { "type": "string" } },
+              "Theme": { "type": "array", "items": { "type": "string" } },
+              "Character": { "type": "array", "items": { "type": "string" } },
+              "Setting": { "type": "array", "items": { "type": "string" } },
+              "Subject": { "type": "array", "items": { "type": "string" } },
+              "General": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "metadata": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramMetadata"
+            }
+          },
+          "eventDetails": {
+            "$ref": "#/components/schemas/EventDetails"
+          },
+          "movie": {
+            "$ref": "#/components/schemas/MovieDetails"
+          },
+          "officialURL": {
+            "type": "string",
+            "format": "uri"
+          },
+          "hasSeriesArtwork": {
+            "type": "boolean"
+          },
+          "hasEpisodeArtwork": {
+            "type": "boolean"
+          },
+          "hasSeasonArtwork": {
+            "type": "boolean"
+          },
+          "hasMovieArtwork": {
+            "type": "boolean"
+          },
+          "hasSportsArtwork": {
+            "type": "boolean"
+          },
+          "hasImageArtwork": {
+            "type": "boolean",
+            "deprecated": true,
+            "description": "End-of-life as of API-20141201. Will not be included in the next API version. Replaced by hasSeriesArtwork (SH-level artwork), hasEpisodeArtwork (episode-specific stills/guest stars), hasMovieArtwork (movie posters/stills), and hasSportsArtwork (sports event imagery). These more-specific booleans are included in current responses for forward compatibility."
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Duration in seconds"
+          },
+          "episodeImage": {
+            "type": "string",
+            "description": "Episode-specific image link"
+          },
+          "multiPart": {
+            "$ref": "#/components/schemas/Multipart"
+          },
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            }
+          },
+          "awards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramAward"
+            }
+          },
+          "md5": {
+            "type": "string",
+            "description": "22-character legacy MD5 hash",
+            "minLength": 22,
+            "maxLength": 22
+          },
+          "hash": {
+            "type": "string",
+            "description": "32-character standard MD5 hash (will become mandatory in future API versions)",
+            "minLength": 32,
+            "maxLength": 32
+          }
+        }
+      },
+      "ProgramTitle": {
+        "type": "object",
+        "required": ["title120"],
+        "properties": {
+          "title120": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "titleLanguage": {
+            "type": "string",
+            "description": "Language tag (e.g., 'en', 'en-GB'). Currently optional, will become mandatory."
+          }
+        }
+      },
+      "ProgramDescriptions": {
+        "type": "object",
+        "properties": {
+          "description100": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DescriptionEntry"
+            }
+          },
+          "description1000": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DescriptionEntry"
+            }
+          }
+        }
+      },
+      "DescriptionEntry": {
+        "type": "object",
+        "required": ["descriptionLanguage", "description"],
+        "properties": {
+          "descriptionLanguage": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "CastMember": {
+        "type": "object",
+        "required": ["billingOrder", "role", "name"],
+        "properties": {
+          "billingOrder": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "example": "Actor"
+          },
+          "name": {
+            "type": "string"
+          },
+          "characterName": {
+            "type": "string"
+          },
+          "nameId": {
+            "type": "string",
+            "description": "Stringified numeric ID (do not convert to integer)"
+          },
+          "personId": {
+            "type": "string",
+            "description": "Stringified numeric ID (do not convert to integer)"
+          }
+        }
+      },
+      "CrewMember": {
+        "type": "object",
+        "required": ["billingOrder", "role", "name"],
+        "properties": {
+          "billingOrder": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "example": "Director"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameId": {
+            "type": "string"
+          },
+          "personId": {
+            "type": "string"
+          }
+        }
+      },
+      "ContentRating": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "Rating organization name"
+          },
+          "code": {
+            "type": "string",
+            "description": "Rating code"
+          },
+          "country": {
+            "type": "string",
+            "description": "ISO 3166 country code"
+          },
+          "contentWarning": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ProgramMetadata": {
+        "type": "object",
+        "description": "Key-value object. Known keys: 'Gracenote' and 'TVmaze' with season/episode numbering.",
+        "properties": {
+          "Gracenote": {
+            "type": "object",
+            "properties": {
+              "season": {
+                "type": "integer"
+              },
+              "episode": {
+                "type": "integer"
+              },
+              "totalEpisodes": {
+                "type": "integer",
+                "description": "For EP programs: total episodes in this season. For SH programs: total episodes in the series."
+              },
+              "totalSeasons": {
+                "type": "integer",
+                "description": "Total number of seasons in the series. SH programs only."
+              }
+            }
+          },
+          "TVmaze": {
+            "type": "object",
+            "properties": {
+              "season": {
+                "type": "integer"
+              },
+              "episode": {
+                "type": "integer"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "TVmaze episode URL"
+              }
+            }
+          }
+        }
+      },
+      "EventDetails": {
+        "type": "object",
+        "description": "Sports event details",
+        "properties": {
+          "gameDate": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the sporting event (YYYY-MM-DD)"
+          },
+          "venue100": {
+            "type": "string"
+          },
+          "teams": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Team"
+            }
+          }
+        }
+      },
+      "Team": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "isHome": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MovieDetails": {
+        "type": "object",
+        "description": "Present only for MV-prefix programIDs",
+        "properties": {
+          "year": {
+            "type": "string",
+            "pattern": "^\\d{4}$"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Duration in seconds"
+          },
+          "qualityRating": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityRating"
+            }
+          }
+        }
+      },
+      "QualityRating": {
+        "type": "object",
+        "properties": {
+          "ratingsBody": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "string"
+          },
+          "minRating": {
+            "type": "string"
+          },
+          "maxRating": {
+            "type": "string"
+          },
+          "increment": {
+            "type": "string"
+          }
+        }
+      },
+      "Multipart": {
+        "type": "object",
+        "properties": {
+          "partNumber": {
+            "type": "integer"
+          },
+          "totalParts": {
+            "type": "integer"
+          }
+        }
+      },
+      "Recommendation": {
+        "type": "object",
+        "properties": {
+          "programID": {
+            "type": "string"
+          },
+          "title120": {
+            "type": "string"
+          }
+        }
+      },
+      "ProgramAward": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "awardName": {
+            "type": "string"
+          },
+          "recipient": {
+            "type": "string"
+          },
+          "personId": {
+            "type": "string"
+          },
+          "won": {
+            "type": "boolean"
+          },
+          "year": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          }
+        }
+      },
+      "GenericDescription": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "0 = OK, 6000 = invalid, 6001 = valid but not ready"
+          },
+          "description100": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "description1000": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        }
+      },
+      "LanguageCrossReference": {
+        "type": "object",
+        "properties": {
+          "programID": {
+            "type": "string"
+          },
+          "md5": {
+            "type": "string"
+          },
+          "titleLanguage": {
+            "type": "string",
+            "example": "en-GB"
+          },
+          "descriptionLanguage": {
+            "type": "string",
+            "example": "en"
+          },
+          "titleLanguageName": {
+            "type": "string",
+            "example": "English - United Kingdom"
+          },
+          "descriptionLanguageName": {
+            "type": "string",
+            "example": "English"
+          }
+        }
+      },
+      "ScheduleRequest": {
+        "type": "object",
+        "required": ["stationID"],
+        "properties": {
+          "stationID": {
+            "type": "string",
+            "example": "20454"
+          },
+          "date": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Specific dates to request (YYYY-MM-DD). Omit to get all available dates."
+          }
+        }
+      },
+      "StationSchedule": {
+        "type": "object",
+        "properties": {
+          "stationID": {
+            "type": "string"
+          },
+          "programs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledProgram"
+            }
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ScheduleMetadata"
+          },
+          "code": {
+            "type": "integer",
+            "description": "Error code if this stationID had an issue (e.g., 2201 STATIONID_DELETED, 7020 SCHEDULE_RANGE_EXCEEDED, 7100 SCHEDULE_QUEUED)"
+          },
+          "response": {
+            "type": "string",
+            "description": "Error response string (e.g., STATIONID_DELETED, SCHEDULE_RANGE_EXCEEDED)"
+          },
+          "serverID": {
+            "type": "string"
+          },
+          "retryTime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "For SCHEDULE_QUEUED: wait until this time before retrying"
+          },
+          "minDate": {
+            "type": "string",
+            "format": "date",
+            "description": "For SCHEDULE_RANGE_EXCEEDED: earliest available date"
+          },
+          "maxDate": {
+            "type": "string",
+            "format": "date",
+            "description": "For SCHEDULE_RANGE_EXCEEDED: latest available date"
+          },
+          "requestedDate": {
+            "type": "string",
+            "format": "date",
+            "description": "For SCHEDULE_RANGE_EXCEEDED: the out-of-range date requested"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ScheduledProgram": {
+        "type": "object",
+        "required": ["programID", "airDateTime", "duration", "md5"],
+        "properties": {
+          "programID": {
+            "type": "string"
+          },
+          "airDateTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "duration": {
+            "type": "integer",
+            "description": "Duration in seconds"
+          },
+          "md5": {
+            "type": "string"
+          },
+          "new": {
+            "type": "boolean",
+            "description": "True if this is a new episode"
+          },
+          "liveTapeDelay": {
+            "type": "string",
+            "enum": ["Live", "Tape", "Delay"]
+          },
+          "isPremiereOrFinale": {
+            "type": "string",
+            "description": "e.g., 'Season Premiere', 'Season Finale', 'Series Premiere', 'Series Finale'"
+          },
+          "audioProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["Atmos", "cc", "DD", "DD 5.1", "Dolby", "dubbed", "dvs", "SAP", "stereo", "subtitled", "surround"]
+            }
+          },
+          "videoProperties": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["3d", "enhanced", "hdtv", "hdr", "letterbox", "sdtv", "uhdtv"]
+            }
+          },
+          "ratings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleRating"
+            }
+          },
+          "multiPart": {
+            "$ref": "#/components/schemas/Multipart"
+          },
+          "cableInTheClassroom": { "type": "boolean" },
+          "catchup": { "type": "boolean" },
+          "continued": { "type": "boolean" },
+          "educational": { "type": "boolean" },
+          "joinedInProgress": { "type": "boolean" },
+          "leftInProgress": { "type": "boolean" },
+          "premiere": { "type": "boolean", "description": "Movies/Miniseries only" },
+          "programBreak": { "type": "boolean" },
+          "repeat": { "type": "boolean", "description": "Encore of sporting event" },
+          "signed": { "type": "boolean", "description": "On-screen sign-language translation" },
+          "subjectToBlackout": { "type": "boolean" },
+          "timeApproximate": { "type": "boolean" },
+          "free": { "type": "boolean", "description": "Normally paid content available free in this instance" }
+        }
+      },
+      "ScheduleRating": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "example": "USA Parental Rating"
+          },
+          "code": {
+            "type": "string",
+            "example": "TVPG"
+          }
+        }
+      },
+      "ScheduleMetadata": {
+        "type": "object",
+        "properties": {
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "md5": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "code": {
+            "type": "integer",
+            "description": "Error code if there were issues with the station (e.g., 2201 for deleted stationID)"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "description": "True if the stationID has been deleted upstream"
+          }
+        }
+      },
+      "ScheduleMd5Entry": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "lastModified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "md5": {
+            "type": "string"
+          }
+        }
+      },
+      "SportsStatusResponse": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "programID": {
+            "type": "string"
+          },
+          "response": {
+            "type": "string"
+          },
+          "isComplete": {
+            "type": "boolean"
+          },
+          "serverID": {
+            "type": "string"
+          },
+          "datetime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "result": {
+            "$ref": "#/components/schemas/SportsResult"
+          }
+        }
+      },
+      "SportsResult": {
+        "type": "object",
+        "properties": {
+          "homeTeam": {
+            "$ref": "#/components/schemas/SportsTeamScore"
+          },
+          "awayTeam": {
+            "$ref": "#/components/schemas/SportsTeamScore"
+          }
+        }
+      },
+      "SportsTeamScore": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Green Bay"
+          },
+          "score": {
+            "type": "string",
+            "example": "10"
+          }
+        }
+      },
+      "ProgramImage": {
+        "type": "object",
+        "description": "Image metadata returned from the program image index endpoints. Width/height may be integers (newer responses) or stringified integers (legacy responses).",
+        "properties": {
+          "width": {
+            "type": ["integer", "string"],
+            "description": "Image width in pixels. May be integer or stringified integer."
+          },
+          "height": {
+            "type": ["integer", "string"],
+            "description": "Image height in pixels. May be integer or stringified integer."
+          },
+          "uri": {
+            "type": "string",
+            "description": "Image URI. If a complete S3 URL, access directly. If a relative path (e.g., 'assets/...'), use with GET /image/{uri} which returns a 303 redirect."
+          },
+          "ratio": {
+            "type": "string",
+            "description": "Aspect ratio (e.g., '2:3', '3:4', '16:9')"
+          },
+          "aspect": {
+            "type": "string",
+            "description": "Aspect shorthand (e.g., '2x3', '3x4')"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "Banner", "Banner-L1", "Banner-L2", "Banner-L3",
+              "Banner-LO", "Banner-LOT",
+              "Iconic", "Staple",
+              "Cast Ensemble", "Cast in Character",
+              "Logo", "Box Art", "Poster Art",
+              "Scene Still", "Photo", "Photo-headshot"
+            ]
+          },
+          "tier": {
+            "type": "string",
+            "description": "Image tier (e.g., 'Series', 'Season', 'Episode')"
+          },
+          "primary": {
+            "type": "string",
+            "description": "If 'true', this is the primary image for the category",
+            "enum": ["true", "false"]
+          },
+          "caption": {
+            "$ref": "#/components/schemas/ImageCaption"
+          },
+          "rootId": {
+            "type": "string",
+            "description": "Root ID that can be used with GET /metadata/programs/{rootId} to retrieve related artwork"
+          },
+          "lastUpdate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ImageCaption": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Caption text"
+          },
+          "lang": {
+            "type": "string",
+            "description": "Language code (e.g., 'en')"
+          }
+        }
+      },
+      "ProgramImageBatchEntry": {
+        "type": "object",
+        "properties": {
+          "programID": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProgramImage"
+            }
+          }
+        }
+      },
+      "CelebrityImage": {
+        "type": "object",
+        "description": "Image object returned by GET /metadata/celebrity/{personId}. Note: uses 'lastUpdated' (with 'd'). The embedded images array in GET /celebrity/{personId} uses 'lastUpdate' (without 'd') — see CelebrityDetailImage.",
+        "properties": {
+          "width": {
+            "type": "string",
+            "description": "Stringified integer"
+          },
+          "height": {
+            "type": "string",
+            "description": "Stringified integer"
+          },
+          "uri": {
+            "type": "string",
+            "description": "Image URI. Use with GET /image/{uri} to retrieve."
+          },
+          "ratio": {
+            "type": "string"
+          },
+          "aspect": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "caption": {
+            "$ref": "#/components/schemas/ImageCaption"
+          },
+          "rootId": {
+            "type": "string",
+            "description": "Root ID linking to the program this image is associated with. Can be used with GET /metadata/programs/{rootId}."
+          },
+          "title": {
+            "type": "string",
+            "description": "Title of the program this image is associated with"
+          },
+          "lastUpdated": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Field name is 'lastUpdated' (with trailing 'd') on this endpoint"
+          }
+        }
+      },
+      "CelebrityDetailImage": {
+        "type": "object",
+        "description": "Image object embedded in the GET /celebrity/{personId} response. Note: uses 'lastUpdate' (without 'd'), unlike CelebrityImage which uses 'lastUpdated'.",
+        "properties": {
+          "width": {
+            "type": "string",
+            "description": "Stringified integer"
+          },
+          "height": {
+            "type": "string",
+            "description": "Stringified integer"
+          },
+          "uri": {
+            "type": "string"
+          },
+          "ratio": {
+            "type": "string"
+          },
+          "aspect": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "lastUpdate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Field name is 'lastUpdate' (without trailing 'd') on this endpoint"
+          }
+        }
+      },
+      "Celebrity": {
+        "type": "object",
+        "required": ["personId", "updateDate", "type", "names"],
+        "properties": {
+          "personId": {
+            "type": "string",
+            "description": "Stringified numeric ID (do not convert to integer)",
+            "example": "68293"
+          },
+          "updateDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["Person", "Group", "Other"]
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["Male", "Female", "Non-Binary"]
+          },
+          "birthPlace": {
+            "type": "string"
+          },
+          "birthDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "deathDate": {
+            "type": ["string", "null"],
+            "format": "date"
+          },
+          "deathPlace": {
+            "type": ["string", "null"]
+          },
+          "deathCause": {
+            "type": ["string", "null"]
+          },
+          "names": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/CelebrityName"
+            }
+          },
+          "mediography": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediographyEntry"
+            }
+          },
+          "awards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CelebrityAward"
+            }
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CelebrityDetailImage"
+            }
+          }
+        }
+      },
+      "CelebrityName": {
+        "type": "object",
+        "required": ["firstName", "nameId"],
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "middleName": {
+            "type": ["string", "null"]
+          },
+          "lastName": {
+            "type": ["string", "null"]
+          },
+          "namePrefix": {
+            "type": ["string", "null"]
+          },
+          "nameSuffix": {
+            "type": ["string", "null"]
+          },
+          "nameLanguage": {
+            "type": ["string", "null"]
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "nameId": {
+            "type": "string",
+            "description": "Stringified numeric ID (do not convert to integer)"
+          }
+        }
+      },
+      "MediographyEntry": {
+        "type": "object",
+        "required": ["programID", "title"],
+        "properties": {
+          "programID": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "programTitleLanguage": {
+            "type": "string"
+          },
+          "programType": {
+            "type": "string",
+            "enum": ["Movie", "Show"]
+          },
+          "credits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {
+                  "type": "string"
+                },
+                "characterName": {
+                  "type": "string"
+                }
+              },
+              "required": ["role"]
+            }
+          },
+          "year": {
+            "type": "string"
+          }
+        }
+      },
+      "CelebrityAward": {
+        "type": "object",
+        "required": ["awardName", "awardCategory", "awardYear", "wonAward"],
+        "properties": {
+          "awardName": {
+            "type": "string"
+          },
+          "awardCategory": {
+            "type": "string"
+          },
+          "awardYear": {
+            "type": "string"
+          },
+          "wonAward": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

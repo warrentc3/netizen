@@ -51,8 +51,8 @@ jobs:
             files=("$dir"*)
             count=${#files[@]}
 
-            if [[ $count -ne 2 ]]; then
-              echo "FAIL: $dir — expected 2 files, found $count"
+            if [[ $count -ne 4 ]]; then
+              echo "FAIL: $dir — expected 4 files (index.html, spec JSON, serve.py, serve.ps1), found $count"
               for f in "${files[@]}"; do echo "  $f"; done
               failed=1
               continue

@@ -122,7 +122,7 @@
           SwaggerUIStandalonePreset
         ],
         layout: "StandaloneLayout",
-        tryItOutEnabled: true,
+        tryItOutEnabled: ['127.0.0.1', 'localhost'].includes(window.location.hostname),
         persistAuthorization: true,
         deepLinking: true,
         displayRequestDuration: true,
@@ -130,9 +130,7 @@
         defaultModelExpandDepth: 2,
         docExpansion: "list",
         filter: true,
-        requestInterceptor: function(request) {
-          return request;
-        }
+        validatorUrl: null
       });
     }
 
